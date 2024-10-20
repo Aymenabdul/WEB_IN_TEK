@@ -1,67 +1,97 @@
 import React, { useState } from 'react';
-import { View, TextInput, Button, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { View, TextInput, Button, StyleSheet, Text, Alert, ActivityIndicator } from 'react-native';
+import axios from 'axios';
+import { useNavigation } from '@react-navigation/native';
 import { Picker } from '@react-native-picker/picker';
-
 
 const SignupScreen = () => {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [jobOption, setJobOption] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [jobOption, setJobOption] = useState('');
+  const [loading, setLoading] = useState(false); // State to manage loading indicator
 
-  const handleSignup = () => {
-    // Logic for handling signup with entered data
-    console.log('Signup with:', firstName, lastName, email, phoneNumber, password, confirmPassword, jobOption);
+  const navigation = useNavigation();
+
+  const validateInputs = () => {
+    if (!firstName || !lastName || !email || !phoneNumber || !jobOption || !password || !confirmPassword) {
+      Alert.alert('Validation Error', 'All fields are required!');
+      return false;
+    }
+
+    // Simple email validation regex
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      Alert.alert('Validation Error', 'Invalid email format!');
+      return false;
+    }
+
+    if (password !== confirmPassword) {
+      Alert.alert('Validation Error', 'Passwords do not match!');
+      return false;
+    }
+
+    return true;
   };
 
-  const handleLinkedInSignup = () => {
-    // Logic for LinkedIn integration (e.g., OAuth)
-    console.log('Continue with LinkedIn');
+  const handleSignup = async () => {
+    if (!validateInputs()) {return;}
+
+    const userData = {
+      firstName,
+      lastName,
+      email,
+      phoneNumber,
+      jobOption,
+      password,
+    };
+
+    setLoading(true); // Show loading indicator
+
+    try {
+      const response = await axios.post('http://10.0.2.2:8080/users', userData, {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 10000,
+      });
+      console.log('User created:', response.data);
+      Alert.alert('Success', 'Signup successful!', [{
+        text: 'OK',
+        onPress: () => {
+          // Reset form fields
+          navigation.navigate('LoginScreen');
+          setFirstName('');
+          setLastName('');
+          setEmail('');
+          setPhoneNumber('');
+          setJobOption('');
+          setPassword('');
+          setConfirmPassword('');
+        },
+      }]);
+    } catch (error) {
+      console.error('Signup failed:', error.response ? error.response.data : error.message);
+    } finally {
+      setLoading(false); // Hide loading indicator
+    }
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Sign Up</Text>
 
-      <TextInput
-        style={styles.input}
-        placeholder="First Name"
-        value={firstName}
-        onChangeText={setFirstName}
-      />
-
-      <TextInput
-        style={styles.input}
-        placeholder="Last Name"
-        value={lastName}
-        onChangeText={setLastName}
-      />
-
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-      />
-
-      <TextInput
-        style={styles.input}
-        placeholder="Phone Number"
-        value={phoneNumber}
-        onChangeText={setPhoneNumber}
-        keyboardType="phone-pad"
-      />
+      <TextInput style={styles.input} placeholder="First Name" value={firstName} onChangeText={setFirstName} />
+      <TextInput style={styles.input} placeholder="Last Name" value={lastName} onChangeText={setLastName} />
+      <TextInput style={styles.input} placeholder="Email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+      <TextInput style={styles.input} placeholder="Phone Number" value={phoneNumber} onChangeText={setPhoneNumber} keyboardType="phone-pad" />
 
       <Text style={styles.label}>Select Job</Text>
       <Picker
         selectedValue={jobOption}
         style={styles.picker}
-        onValueChange={(itemValue, itemIndex) => setJobOption(itemValue)}
+        onValueChange={(itemValue) => setJobOption(itemValue)}
       >
         <Picker.Item label="Select your job" value="" />
         <Picker.Item label="Employer" value="employer" />
@@ -70,27 +100,15 @@ const SignupScreen = () => {
         <Picker.Item label="Investor" value="investor" />
       </Picker>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
+      <TextInput style={styles.input} placeholder="Password" value={password} onChangeText={setPassword} secureTextEntry />
+      <TextInput style={styles.input} placeholder="Confirm Password" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry />
 
-      <TextInput
-        style={styles.input}
-        placeholder="Confirm Password"
-        value={confirmPassword}
-        onChangeText={setConfirmPassword}
-        secureTextEntry
-      />
-
-      <Button title="Create Account" onPress={handleSignup} />
-
-      <TouchableOpacity style={styles.linkedinButton} onPress={handleLinkedInSignup}>
-        <Text style={styles.linkedinText}>Continue with LinkedIn</Text>
-      </TouchableOpacity>
+      {/* Show loading indicator while signup is processing */}
+      {loading ? (
+        <ActivityIndicator size="large" color="#0077B5" style={styles.loadingIndicator} />
+      ) : (
+        <Button title="Create Account" onPress={handleSignup} />
+      )}
     </View>
   );
 };
@@ -125,16 +143,8 @@ const styles = StyleSheet.create({
     borderColor: '#ccc',
     marginBottom: 20,
   },
-  linkedinButton: {
-    marginTop: 20,
-    backgroundColor: '#2867B2',  // LinkedIn's brand color
-    padding: 15,
-    borderRadius: 5,
-  },
-  linkedinText: {
-    color: '#fff',
-    textAlign: 'center',
-    fontSize: 16,
+  loadingIndicator: {
+    marginVertical: 20,
   },
 });
 
