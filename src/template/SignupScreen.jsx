@@ -52,7 +52,7 @@ const SignupScreen = () => {
     setLoading(true); // Show loading indicator
 
     try {
-      const response = await axios.post('http://10.0.2.2:8080/users', userData, {
+      const response = await axios.post('http://192.168.1.2:8080/users', userData, {
         headers: { 'Content-Type': 'application/json' },
         timeout: 10000,
       });
@@ -74,7 +74,7 @@ const SignupScreen = () => {
     } catch (error) {
       console.error('Signup failed:', error.response ? error.response.data : error.message);
     } finally {
-      setLoading(false); // Hide loading indicator
+      setLoading(true); // Hide loading indicator
     }
   };
 
@@ -82,10 +82,10 @@ const SignupScreen = () => {
     <View style={styles.container}>
       <Text style={styles.title}>Sign Up</Text>
 
-      <TextInput style={styles.input} placeholder="First Name" value={firstName} onChangeText={setFirstName} />
-      <TextInput style={styles.input} placeholder="Last Name" value={lastName} onChangeText={setLastName} />
-      <TextInput style={styles.input} placeholder="Email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
-      <TextInput style={styles.input} placeholder="Phone Number" value={phoneNumber} onChangeText={setPhoneNumber} keyboardType="phone-pad" />
+      <TextInput style={styles.input} placeholder="First Name" placeholderTextColor="#000" value={firstName} onChangeText={setFirstName} />
+      <TextInput style={styles.input} placeholder="Last Name" placeholderTextColor="#000" value={lastName} onChangeText={setLastName} />
+      <TextInput style={styles.input} placeholder="Email" placeholderTextColor="#000" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+      <TextInput style={styles.input} placeholder="Phone Number" placeholderTextColor="#000" value={phoneNumber} onChangeText={setPhoneNumber} keyboardType="phone-pad" />
 
       <Text style={styles.label}>Select Job</Text>
       <Picker
@@ -100,8 +100,8 @@ const SignupScreen = () => {
         <Picker.Item label="Investor" value="investor" />
       </Picker>
 
-      <TextInput style={styles.input} placeholder="Password" value={password} onChangeText={setPassword} secureTextEntry />
-      <TextInput style={styles.input} placeholder="Confirm Password" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry />
+      <TextInput style={styles.input} placeholder="Password" placeholderTextColor="#000" value={password} onChangeText={setPassword} secureTextEntry />
+      <TextInput style={styles.input} placeholder="Confirm Password" placeholderTextColor="#000" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry />
 
       {/* Show loading indicator while signup is processing */}
       {loading ? (
@@ -131,10 +131,12 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 10,
     borderRadius: 5,
+    color:'black',
   },
   label: {
     fontSize: 16,
     marginVertical: 10,
+    color:'black',
   },
   picker: {
     height: 50,
@@ -142,6 +144,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ccc',
     marginBottom: 20,
+    color:'black',
   },
   loadingIndicator: {
     marginVertical: 20,

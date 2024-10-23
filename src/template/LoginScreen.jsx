@@ -29,7 +29,7 @@ const LoginScreen = ({ navigation }) => {
     setLoading(true);
     try {
       const response = await axios.post(
-        'http://10.0.2.2:8080/api/login',
+        'http://192.168.1.2:8080/api/login',
         { email, password },
         {
           headers: {
@@ -42,6 +42,8 @@ const LoginScreen = ({ navigation }) => {
 
       if (firstName && jobOption) {
         navigation.navigate('HomeScreen', { firstName, jobOption });
+        setEmail('');
+      setPassword('');
       } else {
         Alert.alert('Error', 'User data is incomplete.');
       }
@@ -84,7 +86,7 @@ const handleWebViewNavigationStateChange = async (navState) => {
       setShowLinkedInModal(false); // Close the LinkedIn modal
       setLoading(true);
       try {
-        const response = await axios.post('http://10.0.2.2:8080/auth/linkedin', { code });
+        const response = await axios.post('http://192.168.1.2:8080/auth/linkedin', { code });
         const { given_name, email } = response.data;
         if (given_name && email) {
           console.log('LinkedIn User Details:', { given_name, email });
@@ -116,6 +118,7 @@ const handleWebViewNavigationStateChange = async (navState) => {
       <TextInput
         style={styles.input}
         placeholder="Email"
+        placeholderTextColor="#000"
         value={email}
         onChangeText={setEmail}
         keyboardType="email-address"
@@ -125,6 +128,7 @@ const handleWebViewNavigationStateChange = async (navState) => {
       <TextInput
         style={styles.input}
         placeholder="Password"
+        placeholderTextColor="#000"
         value={password}
         onChangeText={setPassword}
         secureTextEntry
@@ -188,6 +192,7 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 10,
     borderRadius: 5,
+    color:'black',
   },
   createAccount: {
     color: 'blue',
