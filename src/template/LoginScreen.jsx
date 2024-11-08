@@ -9,10 +9,12 @@ import {
   Alert,
   Modal,
   ActivityIndicator,
+  Image,
 } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
+
 import axios from 'axios'; // Import Axios
 import { WebView } from 'react-native-webview'; // Import WebView for LinkedIn OAuth
-
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -29,7 +31,7 @@ const LoginScreen = ({ navigation }) => {
     setLoading(true);
     try {
       const response = await axios.post(
-        'http://192.168.1.2:8080/api/login',
+        'http://172.20.10.3:8080/api/login',
         { email, password },
         {
           headers: {
@@ -41,9 +43,14 @@ const LoginScreen = ({ navigation }) => {
       const { firstName, jobOption } = response.data;
 
       if (firstName && jobOption) {
-        navigation.navigate('HomeScreen', { firstName, jobOption });
+        // Check jobOption to navigate to the appropriate screen
+        if (jobOption === 'employee' || jobOption === 'entrepreneur') {
+          navigation.navigate('home1', { firstName, jobOption });
+        } else if (jobOption === 'employer' || jobOption === 'investor') {
+          navigation.navigate('HomeScreen', { firstName, jobOption });
+        }
         setEmail('');
-      setPassword('');
+        setPassword('');
       } else {
         Alert.alert('Error', 'User data is incomplete.');
       }
@@ -86,7 +93,7 @@ const handleWebViewNavigationStateChange = async (navState) => {
       setShowLinkedInModal(false); // Close the LinkedIn modal
       setLoading(true);
       try {
-        const response = await axios.post('http://192.168.1.2:8080/auth/linkedin', { code });
+        const response = await axios.post('http://172.20.10.3:8080/auth/linkedin', { code });
         const { given_name, email } = response.data;
         if (given_name && email) {
           console.log('LinkedIn User Details:', { given_name, email });
@@ -112,9 +119,12 @@ const handleWebViewNavigationStateChange = async (navState) => {
 };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Login</Text>
-
+    <LinearGradient colors={['#70bdff','#2e80d8']} style={styles.linearGradient}>
+    <Image style={styles.img} source={require('./assets/Png-01.png')} />
+    <LinearGradient colors={['#d3e4f6','#a1d1ff']} style={styles.ModelGradient}>
+    <Image style={styles.img2} source={require('./assets/logo.png')}/>
+    <Text style={styles.loginhead}>Login</Text>
+    <Text style={styles.loginsub}>Welcome back , you've been missed!</Text>
       <TextInput
         style={styles.input}
         placeholder="Email"
@@ -134,17 +144,24 @@ const handleWebViewNavigationStateChange = async (navState) => {
         secureTextEntry
       />
 
-      <Button title="Login" onPress={handleLogin} disabled={loading} />
-
+<LinearGradient colors={['#70bdff','#2e80d8']} style={styles.btn}>
+        <TouchableOpacity style={styles.signupButton} onPress={handleLogin}>
+      <Text style={styles.signupButtonText}>Login</Text>
+    </TouchableOpacity>
+    </LinearGradient>
       <TouchableOpacity onPress={() => navigation.navigate('SignupScreen')}>
-        <Text style={styles.createAccount}>Create Account</Text>
+        <Text style={styles.createAccount}>Don't Have An Account ? <Text style={{color:'blue'}}> SignUp..</Text></Text>
       </TouchableOpacity>
-
+      <View style={styles.dividerContainer}>
+  <View style={styles.horizontalLine} />
+  <Text style={styles.dividerText}>or Login with</Text>
+  <View style={styles.horizontalLine} />
+</View>
       <TouchableOpacity
         style={styles.linkedinButton}
         onPress={handleLinkedInLogin}
       >
-        <Text style={styles.linkedinButtonText}>Login with LinkedIn</Text>
+        <Text style={styles.linkedinButtonText}>Linked in</Text>
       </TouchableOpacity>
 
       <Modal
@@ -168,18 +185,37 @@ const handleWebViewNavigationStateChange = async (navState) => {
       {loading && (
         <ActivityIndicator size="large" color="#0000ff" style={styles.loadingIndicator} />
       )}
-    </View>
+    </LinearGradient>
+    </LinearGradient>
   );
 };
 
 export default LoginScreen;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: 16,
-    backgroundColor: '#fff',
+  linearGradient:{
+flex:1,
+justifyContent:'center',
+alignItems:'center',
+width:'100%',
+height:'100%',
+  },
+  img:{
+    width:300,
+    height:350,
+    marginBottom:-70,
+  },
+  ModelGradient: {
+    width:'90%',
+    borderColor:'#fff',
+    borderWidth:1,
+    borderStyle:'solid',
+    paddingHorizontal:15,
+    paddingVertical:60,
+    backgroundColor: 'rgba(255, 255, 255,0.7)',
+    borderRadius:10,
+    marginTop:-50,
+    elevation:5,
   },
   title: {
     fontSize: 32,
@@ -188,31 +224,32 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: '#187bcd',
     padding: 10,
     marginBottom: 10,
-    borderRadius: 5,
+    borderRadius:7,
     color:'black',
+    backgroundColor:'#fff',
   },
   createAccount: {
-    color: 'blue',
+    color: '#000',
     marginTop: 10,
     textAlign: 'center',
   },
   linkedinButton: {
-    backgroundColor: '#0077B5',
+    backgroundColor: '#ffff',
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 5,
-    marginTop: 20,
+    marginTop:20,
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
   },
   linkedinButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    color: '#0077B5',
+    fontSize: 20,
+    fontWeight: '700',
   },
   modalContainer: {
     flex: 1,
@@ -224,5 +261,57 @@ const styles = StyleSheet.create({
     top: '50%',
     left: '50%',
     transform: [{ translateX: -20 }, { translateY: -20 }],
+  },
+  img2:{
+    width:200,
+    height:100,
+    marginTop:-60,
+    marginHorizontal:40,
+  },
+  loginhead:{
+    width:'100%',
+    marginHorizontal:110,
+    marginTop:-41,
+    fontSize:24,
+    fontWeight:'500',
+    color:'#4e4b51',
+  },
+  loginsub:{
+    width:'100%',
+    marginLeft:30,
+    marginTop:7,
+    marginBottom:7,
+  },
+  signupButton:{
+   height:40,
+   justifyContent:'center',
+   alignItems:'center',
+   padding:7,
+  },
+  signupButtonText:{
+    fontWeight:'500',
+    color:'#ffffff',
+    fontSize:20,
+  },
+  btn:{
+    width:150,
+    marginHorizontal:80,
+    borderRadius:10,
+    elevation:5,
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 10,
+  },
+  horizontalLine: {
+    flex: 1,
+    height:2,
+    backgroundColor: '#0B0705',
+  },
+  dividerText: {
+    marginHorizontal: 8,
+    fontSize: 16,
+    color: '#555',
   },
 });

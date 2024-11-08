@@ -83,7 +83,16 @@
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-validation</artifactId>
 </dependency>
-
+<dependency>
+    <groupId>com.assemblyai</groupId>
+    <artifactId>assemblyai-java</artifactId>
+    <version>1.0.0</version>
+</dependency>
+<dependency>
+        <groupId>com.transloadit.sdk</groupId>
+        <artifactId>transloadit</artifactId>
+        <version>1.0.0</version>
+    </dependency>
 	</dependencies>
 
 	<build>

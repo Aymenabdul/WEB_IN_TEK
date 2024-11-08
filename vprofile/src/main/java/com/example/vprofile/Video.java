@@ -1,0 +1,77 @@
+package com.example.vprofile;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+
+@Entity
+public class Video {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    private String fileName;
+    private String filePath;
+    private String audioFilePath; 
+    private Long userId;
+    private String transcription; // Add transcription field
+
+    // Constructors, getters, and setters
+    public Video() {}
+
+    public Video(String fileName, String filePath, Long userId, String transcription , String audioFilePath) {
+        this.fileName = fileName;
+        this.filePath = filePath;
+        this.userId = userId;
+        this.transcription = transcription;
+        this.audioFilePath = audioFilePath;
+    }
+
+    // Getters and Setters
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getFileName() {
+        return fileName;
+    }
+
+    public void setFileName(String fileName) {
+        this.fileName = fileName;
+    }
+
+    public String getFilePath() {
+        return filePath;
+    }
+
+    public void setFilePath(String filePath) {
+        this.filePath = filePath;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
+    }
+
+    public String getTranscription() {
+        return transcription; // Getter for transcription
+    }
+
+    public void setTranscription(String transcription) {
+        this.transcription = transcription; // Setter for transcription
+    }
+    public String getAudioFilePath() {
+        return audioFilePath;
+    }
+
+    public void setAudioFilePath(String audioFilePath) {
+        this.audioFilePath = audioFilePath;
+    }
+}
