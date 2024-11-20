@@ -24,7 +24,9 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 public class VideoService {
@@ -199,5 +201,44 @@ public class VideoService {
 
         System.out.println("Video entity created: " + video);
         return video;
+    }
+
+    public List<Video> getVideosByUserId(Long userId) {
+        return videoRepository.findByUserId(userId);
+    }
+
+     // Fetch transcription of a video
+     public String getTranscription(Long videoId) {
+        Optional<Video> video = videoRepository.findById(videoId);
+        if (video.isPresent()) {
+            return video.get().getTranscription();  // Ensure this returns the correct transcription
+        }
+        return null;  // Make sure this doesn't return an empty string or null unnecessarily
+    }
+    // Update transcription of a video
+    public Video updateTranscription(Long videoId, String transcription) throws Exception {
+        // Retrieve the video from the database
+        Video video = videoRepository.findById(videoId)
+            .orElseThrow(() -> new Exception("Video not found"));
+        
+        // Log the current state of the video entity
+        System.out.println("Before update: " + video.getTranscription());
+        
+        // Update the transcription field
+        video.setTranscription(transcription);
+    
+        // Log the updated state of the video entity
+        System.out.println("After update: " + video.getTranscription());
+    
+        // Save the updated video back to the database
+        return videoRepository.save(video);
+    }
+    public boolean deleteVideo(Long videoId) {
+        Optional<Video> video = videoRepository.findById(videoId);
+        if (video.isPresent()) {
+            videoRepository.delete(video.get());
+            return true;
+        }
+        return false;
     }
 }

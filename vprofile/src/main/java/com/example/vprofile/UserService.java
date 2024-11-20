@@ -25,4 +25,12 @@ public class UserService {
         }
         return false; // User not found or password doesn't match
     }
+    public boolean isEmailExists(String email) {
+        return userRepository.existsByEmail(email);  // This will return true if email exists
+    }
+    
+    public boolean isPhoneExists(String phoneNumber) {
+        return userRepository.existsByPhoneNumber(phoneNumber);
+    }
+    
 }

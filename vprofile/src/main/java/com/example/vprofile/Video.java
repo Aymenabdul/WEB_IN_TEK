@@ -1,9 +1,11 @@
 package com.example.vprofile;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Lob;
 
 @Entity
 public class Video {
@@ -15,7 +17,9 @@ public class Video {
     private String audioFilePath; 
     private Long userId;
     private String transcription; // Add transcription field
-
+    @Lob
+    @Column(name = "video_data", columnDefinition = "LONGBLOB")
+    private byte[] videoData;
     // Constructors, getters, and setters
     public Video() {}
 
@@ -73,5 +77,12 @@ public class Video {
 
     public void setAudioFilePath(String audioFilePath) {
         this.audioFilePath = audioFilePath;
+    }
+    public byte[] getVideoData() {
+        return videoData;
+    }
+
+    public void setVideoData(byte[] videoData) {
+        this.videoData = videoData;
     }
 }

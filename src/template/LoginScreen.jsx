@@ -12,14 +12,29 @@ import {
   Image,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-
+import FastImage from 'react-native-fast-image';
 import axios from 'axios'; // Import Axios
 import { WebView } from 'react-native-webview'; // Import WebView for LinkedIn OAuth
-const LoginScreen = ({ navigation }) => {
+import { useNavigation } from '@react-navigation/native';
+// import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const LoginScreen = () => {
+  const navigation = useNavigation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showLinkedInModal, setShowLinkedInModal] = useState(false);
   const [loading, setLoading] = useState(false);
+
+
+  // async storage
+  // const saveStorage = async (userId) => {
+  //   try{
+  //     await AsyncStorage.setItem('userId', userId);
+  //   } catch(error){
+  //     console.log(error);
+  //   }
+  // }
+
 
   // Function to handle standard login
   const handleLogin = async () => {
@@ -31,7 +46,7 @@ const LoginScreen = ({ navigation }) => {
     setLoading(true);
     try {
       const response = await axios.post(
-        'http://172.20.10.3:8080/api/login',
+        'http://172.20.10.4:8080/api/login',
         { email, password },
         {
           headers: {
@@ -40,14 +55,19 @@ const LoginScreen = ({ navigation }) => {
         }
       );
 
-      const { firstName, jobOption } = response.data;
 
+      // const userId = response.data.userId
+      const { firstName, jobOption, userId, profilepic,industry } = response.data;
+console.log('====================================');
+console.log(response.data);
+console.log('====================================');
       if (firstName && jobOption) {
         // Check jobOption to navigate to the appropriate screen
-        if (jobOption === 'employee' || jobOption === 'entrepreneur') {
-          navigation.navigate('home1', { firstName, jobOption });
+        if (jobOption === 'Employee' || jobOption === 'entrepreneur') {
+          // await saveStorage(userId)
+          navigation.navigate('home1', { firstName, jobOption, userId, profilepic,industry });
         } else if (jobOption === 'employer' || jobOption === 'investor') {
-          navigation.navigate('HomeScreen', { firstName, jobOption });
+          navigation.navigate('home1', { firstName, jobOption, userId, profilepic,industry });
         }
         setEmail('');
         setPassword('');
@@ -55,6 +75,7 @@ const LoginScreen = ({ navigation }) => {
         Alert.alert('Error', 'User data is incomplete.');
       }
     } catch (error) {
+      console.log(error);
       console.error('Login failed:', error.response ? error.response.data : error.message);
       Alert.alert('Login Failed', 'Invalid email or password!');
     } finally {
@@ -93,8 +114,11 @@ const handleWebViewNavigationStateChange = async (navState) => {
       setShowLinkedInModal(false); // Close the LinkedIn modal
       setLoading(true);
       try {
-        const response = await axios.post('http://172.20.10.3:8080/auth/linkedin', { code });
+        const response = await axios.post('http://172.20.10.4:8080/auth/linkedin', { code });
         const { given_name, email } = response.data;
+        console.log('====================================');
+        console.log(response.data);
+        console.log('====================================');
         if (given_name && email) {
           console.log('LinkedIn User Details:', { given_name, email });
           // Navigate to HomeScreen with user details
@@ -119,12 +143,47 @@ const handleWebViewNavigationStateChange = async (navState) => {
 };
 
   return (
-    <LinearGradient colors={['#70bdff','#2e80d8']} style={styles.linearGradient}>
+    <FastImage
+        style={styles.backgroundImage}
+        source={require('./assets/onbor.gif')}
+        resizeMode={FastImage.resizeMode.cover}
+      >
     <Image style={styles.img} source={require('./assets/Png-01.png')} />
     <LinearGradient colors={['#d3e4f6','#a1d1ff']} style={styles.ModelGradient}>
     <Image style={styles.img2} source={require('./assets/logo.png')}/>
     <Text style={styles.loginhead}>Login</Text>
-    <Text style={styles.loginsub}>Welcome back , you've been missed!</Text>
+    {/* <Text style={styles.loginsub}>Welcome back , you've been missed!</Text> */}
+    <TouchableOpacity
+        style={styles.linkedinButton}
+        onPress={handleLinkedInLogin}
+      >
+        <Text style={styles.linkedinButtonText}>LinkedIn</Text>
+      </TouchableOpacity>
+
+      <Modal
+        visible={showLinkedInModal}
+        animationType="slide"
+        transparent={true}
+      >
+        <View style={styles.modalContainer}>
+          <WebView
+            source={{
+              uri: 'https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=869zn5otx0ejyt&redirect_uri=https://www.linkedin.com/developers/tools/oauth/redirect&scope=profile%20email%20openid', // Replace with your values
+            }}
+            onNavigationStateChange={handleWebViewNavigationStateChange}
+            startInLoadingState={true}
+          />
+
+          <Button title="Close" onPress={() => setShowLinkedInModal(false)} />
+        </View>
+      </Modal>
+
+
+    <View style={styles.dividerContainer}>
+  <View style={styles.horizontalLine} />
+  <Text style={styles.dividerText}>or Login with</Text>
+  <View style={styles.horizontalLine} />
+</View>
       <TextInput
         style={styles.input}
         placeholder="Email"
@@ -152,48 +211,19 @@ const handleWebViewNavigationStateChange = async (navState) => {
       <TouchableOpacity onPress={() => navigation.navigate('SignupScreen')}>
         <Text style={styles.createAccount}>Don't Have An Account ? <Text style={{color:'blue'}}> SignUp..</Text></Text>
       </TouchableOpacity>
-      <View style={styles.dividerContainer}>
-  <View style={styles.horizontalLine} />
-  <Text style={styles.dividerText}>or Login with</Text>
-  <View style={styles.horizontalLine} />
-</View>
-      <TouchableOpacity
-        style={styles.linkedinButton}
-        onPress={handleLinkedInLogin}
-      >
-        <Text style={styles.linkedinButtonText}>Linked in</Text>
-      </TouchableOpacity>
-
-      <Modal
-        visible={showLinkedInModal}
-        animationType="slide"
-        transparent={true}
-      >
-        <View style={styles.modalContainer}>
-          <WebView
-            source={{
-              uri: 'https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=869zn5otx0ejyt&redirect_uri=https://www.linkedin.com/developers/tools/oauth/redirect&scope=profile%20email%20openid', // Replace with your values
-            }}
-            onNavigationStateChange={handleWebViewNavigationStateChange}
-            startInLoadingState={true}
-          />
-
-          <Button title="Close" onPress={() => setShowLinkedInModal(false)} />
-        </View>
-      </Modal>
 
       {loading && (
         <ActivityIndicator size="large" color="#0000ff" style={styles.loadingIndicator} />
       )}
     </LinearGradient>
-    </LinearGradient>
+    </FastImage>
   );
 };
 
 export default LoginScreen;
 
 const styles = StyleSheet.create({
-  linearGradient:{
+  backgroundImage:{
 flex:1,
 justifyContent:'center',
 alignItems:'center',
@@ -266,19 +296,20 @@ height:'100%',
     width:200,
     height:100,
     marginTop:-60,
-    marginHorizontal:40,
+    marginHorizontal:65,
   },
   loginhead:{
     width:'100%',
-    marginHorizontal:110,
+    marginHorizontal:145,
     marginTop:-41,
+    marginBottom:10,
     fontSize:24,
     fontWeight:'500',
     color:'#4e4b51',
   },
   loginsub:{
     width:'100%',
-    marginLeft:30,
+    marginLeft:40,
     marginTop:7,
     marginBottom:7,
   },
@@ -286,6 +317,7 @@ height:'100%',
    height:40,
    justifyContent:'center',
    alignItems:'center',
+   marginHorizontal:20,
    padding:7,
   },
   signupButtonText:{
@@ -295,7 +327,7 @@ height:'100%',
   },
   btn:{
     width:150,
-    marginHorizontal:80,
+    marginHorizontal:100,
     borderRadius:10,
     elevation:5,
   },

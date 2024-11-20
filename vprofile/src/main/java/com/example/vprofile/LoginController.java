@@ -17,34 +17,34 @@ public class LoginController {
     private UserRepository userRepository; // Injecting UserRepository
 
     @PostMapping("/login")
-    public ResponseEntity<Map<String, String>> login(@RequestBody Map<String, String> payload) {
-        // Extracting email and password directly from the request body
-        String email = payload.get("email");
-        String password = payload.get("password");
+public ResponseEntity<Map<String, Object>> login(@RequestBody Map<String, String> payload) {
+    String email = payload.get("email");
+    String password = payload.get("password");
 
-        // Find user by email
-        Optional<User> userOptional = userRepository.findByEmail(email); // Correctly getting Optional<User>
-        
-        if (userOptional.isPresent()) {
-            User user = userOptional.get(); // Getting the User object
+    // Fetch user from the database
+    Optional<User> userOptional = userRepository.findByEmail(email);
 
-            // Check if password matches
-            if (user.getPassword().equals(password)) {
-                // Prepare response with firstName and jobOption
-                Map<String, String> response = new HashMap<>();
-                response.put("firstName", user.getFirstName()); // Assuming getFirstName() method exists
-                response.put("jobOption", user.getJobOption()); // Assuming getJobOption() method exists
+    if (userOptional.isPresent()) {
+        User user = userOptional.get();
 
-                return new ResponseEntity<>(response, HttpStatus.OK);
-            } else {
-                Map<String, String> errorResponse = new HashMap<>();
-                errorResponse.put("message", "Invalid email or password!");
-                return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
-            }
+        // Directly compare passwords
+        if (user.getPassword().equals(password)) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("firstName", user.getFirstName());
+            response.put("jobOption", user.getJobOption());
+            response.put("userId", user.getId());
+            response.put("profilePic", user.getProfilePic());
+            response.put("industry",user.getIndustry());
+            return ResponseEntity.ok(response);
         } else {
-            Map<String, String> errorResponse = new HashMap<>();
+            Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("message", "Invalid email or password!");
             return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
         }
+    } else {
+        Map<String, Object> errorResponse = new HashMap<>();
+        errorResponse.put("message", "Invalid email or password!");
+        return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
     }
+}
 }

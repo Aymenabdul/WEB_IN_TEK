@@ -32,19 +32,19 @@ const HomeScreen = ({ route }) => {
 
   return (
     <View style={styles.container}>
-      {/* <View style={styles.header}>
+      <View style={styles.header}>
         <Text style={styles.headerText}>Welcome, {firstName}!</Text>
         <Text style={styles.jobText}>{jobOptionsMap[jobOption]}</Text>
       </View>
 
-      <Text style={styles.contentText}>This is your home screen.</Text> */}
+      <Text style={styles.contentText}>This is your home screen.</Text>
       <View style={styles.container}>
       <Image source={require('./assets/video.jpg')} style={styles.fullScreenImage}/>
     
       {/* Logout button */}
-      {/* <View style={styles.logoutButton}>
+      <View style={styles.logoutButton}>
         <Button title="Logout" onPress={handleLogout} color="#FF6347" />
-      </View> */}
+      </View>
       </View>
     </View>
   );
