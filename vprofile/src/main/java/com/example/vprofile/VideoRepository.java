@@ -4,11 +4,30 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface VideoRepository extends JpaRepository<Video, Long> {
     // You can add custom query methods if needed
-    List<Video> findByUserId(Long userId);
+    Optional<Video> findByUserId(Long userId);
     Optional<Video> findById(Long videoId);
+    List<Video> findAll();
+
+    
+        @Query(value = "SELECT v1_0.id, v1_0.audio_file_path, v1_0.file_name, v1_0.file_path, v1_0.transcription, v1_0.user_id, v1_0.video_data " +
+                       "FROM video v1_0 " +
+                       "JOIN user u1_0 ON v1_0.user_id = u1_0.id " +
+                       "WHERE " +
+                       "(COALESCE(:keySkills, '') = '' OR u1_0.key_skills LIKE :keySkills) AND " +
+                       "(COALESCE(:experience, '') = '' OR u1_0.experience = :experience) AND " +
+                       "(COALESCE(:industry, '') = '' OR u1_0.industry LIKE :industry) AND " +
+                       "(COALESCE(:city, '') = '' OR u1_0.city = :city)", nativeQuery = true)
+        List<Video> findByFilters(@Param("keySkills") String keySkills,
+                                   @Param("experience") String experience,
+                                   @Param("industry") String industry,
+                                   @Param("city") String city);
+    
+
 }
 
 

@@ -12,20 +12,26 @@ public class Video {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    
     private String fileName;
+    
+    @Lob
+    @Column(name = "video_data", columnDefinition = "LONGBLOB")
+    private byte[] videoData; // Field to store video as byte array
+
     private String filePath;
     private String audioFilePath; 
     private Long userId;
+    
+    @Column(name = "transcription", columnDefinition = "LONGTEXT")
     private String transcription; // Add transcription field
-    @Lob
-    @Column(name = "video_data", columnDefinition = "LONGBLOB")
-    private byte[] videoData;
-    // Constructors, getters, and setters
+
     public Video() {}
 
-    public Video(String fileName, String filePath, Long userId, String transcription , String audioFilePath) {
+    // Add this constructor to match the parameters being passed in the service
+    public Video(String fileName, byte[] videoData,Long userId, String transcription, String audioFilePath) {
         this.fileName = fileName;
-        this.filePath = filePath;
+        this.videoData = videoData;
         this.userId = userId;
         this.transcription = transcription;
         this.audioFilePath = audioFilePath;
@@ -46,6 +52,14 @@ public class Video {
 
     public void setFileName(String fileName) {
         this.fileName = fileName;
+    }
+
+    public byte[] getVideoData() {
+        return videoData;
+    }
+
+    public void setVideoData(byte[] videoData) {
+        this.videoData = videoData;
     }
 
     public String getFilePath() {
@@ -71,6 +85,7 @@ public class Video {
     public void setTranscription(String transcription) {
         this.transcription = transcription; // Setter for transcription
     }
+
     public String getAudioFilePath() {
         return audioFilePath;
     }
@@ -78,11 +93,5 @@ public class Video {
     public void setAudioFilePath(String audioFilePath) {
         this.audioFilePath = audioFilePath;
     }
-    public byte[] getVideoData() {
-        return videoData;
-    }
-
-    public void setVideoData(byte[] videoData) {
-        this.videoData = videoData;
-    }
 }
+

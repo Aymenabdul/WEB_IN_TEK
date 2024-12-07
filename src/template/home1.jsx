@@ -4,7 +4,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   Text,
-  FlatList,
   ActivityIndicator,
   Modal,
   TextInput,
@@ -16,39 +15,99 @@ import Header from './header';
 import axios from 'axios';
 import {Buffer} from 'buffer';
 import Video from 'react-native-video';
+import Delete from 'react-native-vector-icons/MaterialCommunityIcons';
+import Share from 'react-native-vector-icons/Ionicons';
 
 const Home1 = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const {firstName, industry, userId} = route.params;
-
+  const [videoUri, setVideoUri] = useState(null);
   const [loading, setLoading] = useState(true);
   const [profileImage, setProfileImage] = useState(null);
-  const [videos, setVideos] = useState([]);
-  // const [numColumns, setNumColumns] = useState(0);
   const [modalVisible, setModalVisible] = useState(false);
-  const [selectedVideo, setSelectedVideo] = useState(null);
   const [transcription, setTranscription] = useState('');
+  const [newTranscription, setNewTranscription] = useState('');
+  const [videos, setVideos] = useState([]);
   const [isTranscriptionModalVisible, setIsTranscriptionModalVisible] =
     useState(false);
+  const [hasVideo, setHasVideo] = useState(false); // Track if video is uploaded
+  const [currentTime, setCurrentTime] = useState(0);
+  const [subtitles, setSubtitles] = useState([]);
+  const [currentSubtitle, setCurrentSubtitle] = useState('');
 
   useEffect(() => {
     if (userId) {
       fetchProfilePic(userId);
-      fetchUserVideos(userId);
+      fetchVideo(userId);
     } else {
       console.error('No userId found');
       setLoading(false);
     }
-  }, [userId, firstName, industry, route.params]);
-  console.log('====================================');
-  console.log(userId, firstName, industry, route.params);
-  console.log('====================================');
+  }, [userId]);
+
+
+  // Function to parse SRT subtitle format
+  const parseSRT = srtText => {
+    const lines = srtText.split('\n');
+    const parsedSubtitles = [];
+    let i = 0;
+
+    while (i < lines.length) {
+      if (lines[i].match(/\d+/)) {
+        const startEnd = lines[i + 1].split(' --> ');
+        const startTime = parseTimeToSeconds(startEnd[0]);
+        const endTime = parseTimeToSeconds(startEnd[1]);
+        const text = lines[i + 2];
+        parsedSubtitles.push({startTime, endTime, text});
+        i += 4;
+      } else {
+        i++;
+      }
+    }
+
+    return parsedSubtitles;
+  };
+  // Function to convert time format to seconds
+  const parseTimeToSeconds = timeStr => {
+    const [hours, minutes, seconds] = timeStr.split(':');
+    const [sec, milli] = seconds.split(',');
+    return (
+      parseInt(hours) * 3600 +
+      parseInt(minutes) * 60 +
+      parseInt(sec) +
+      parseInt(milli) / 1000
+    );
+  };
+  // Function to check which subtitle is currently active based on video time
+  useEffect(() => {
+    const activeSubtitle = subtitles.find(
+      subtitle =>
+        currentTime >= subtitle.startTime && currentTime <= subtitle.endTime,
+    );
+    setCurrentSubtitle(activeSubtitle ? activeSubtitle.text : '');
+  }, [currentTime, subtitles]);
+
+   // Fetch subtitles when component is mounted
+   useEffect(() => {
+    const fetchSubtitles = async () => {
+      try {
+        const response = await fetch(subtitlesUrl);
+        const text = await response.text();
+        const parsedSubtitles = parseSRT(text);
+        setSubtitles(parsedSubtitles);
+      } catch (error) {
+        console.error('Error fetching subtitles:', error);
+      }
+    };
+    fetchSubtitles();
+  },[subtitlesUrl]);
+
   // Fetch profile image
   const fetchProfilePic = async userId => {
     try {
       const response = await axios.get(
-        `http://172.20.10.4:8080/users/user/${userId}/profilepic`,
+        `http://192.168.1.5:8080/users/user/${userId}/profilepic`,
         {
           responseType: 'arraybuffer',
         },
@@ -71,158 +130,102 @@ const Home1 = () => {
       setLoading(false);
     }
   };
-
-  // Fetch user's videos
-  const BASE_URL = 'http://172.20.10.4:8080';
-
-  const fetchUserVideos = async userId => {
-    setLoading(true); // Show loading indicator during refresh
-
+  // Fetch user's video
+  const fetchVideo = async userId => {
     try {
-      const response = await axios.get(`${BASE_URL}/api/videos/user/${userId}`);
-      console.log('Response Data:', response.data);
+      const response = await fetch(
+        `http://192.168.1.5:8080/api/videos/user/${userId}`,
+      );
+      if (!response.ok) throw new Error('Failed to fetch video');
 
-      if (response.data && Array.isArray(response.data)) {
-        const videosWithFullPaths = response.data
-          .map(video => {
-            if (!video.filePath) {
-              console.error('Invalid file path for video:', video);
-              return null;
-            }
-
-            console.log('hii', video.filePath);
-
-            // Constructing video path with file://
-            const videoPath = `file://${video.filePath}`;
-            console.log('Constructed Video Path:', videoPath);
-
-            // Returning the video object with the new url
-            return {...video, url: videoPath};
-          })
-          .filter(Boolean); // Filter out null values
-
-        setVideos(videosWithFullPaths);
-        console.log('Video paths:', videosWithFullPaths);
-      } else {
-        console.error('No videos found in response');
-        alert('No videos available for this user.');
-      }
+      const videoUri = `http://192.168.1.5:8080/api/videos/user/${userId}`;
+      setVideoUri(videoUri);
+      setHasVideo(true); // Set to true if video is available
     } catch (error) {
-      console.error('Error fetching videos:', error);
-      alert('Failed to fetch videos. Please try again.');
+      alert('Welcome , you can now start recording the video');
+      setHasVideo(false); // Set to false if no video is available
     } finally {
-      setLoading(false); // Hide loading indicator
+      setLoading(false);
     }
   };
 
-  // Fetch transcription for selected video
-
-  const fetchTranscription = async videoId => {
+  // Fetch transcription
+  const fetchTranscription = async userId => {
     try {
       const response = await axios.get(
-        `http://172.20.10.4:8080/api/videos/${videoId}/transcription`,
+        `http://192.168.1.5:8080/api/videos/${userId}/transcription`,
       );
-      if (response.data && response.data.transcription) {
+      if (response.data.transcription) {
         setTranscription(response.data.transcription);
-        setIsTranscriptionModalVisible(true);
+        setIsTranscriptionModalVisible(true); // Show modal after fetching
       } else {
-        console.error('No transcription found');
+        alert('No transcription available for this user.');
       }
     } catch (error) {
-      console.error('Error fetching transcription:', error);
+      console.error('Error fetching transcription:', error.message);
+      alert('Failed to fetch transcription.');
     }
   };
 
-  // Update transcription for selected video
-  const updateTranscription = async (videoId, newTranscription) => {
-    try {
-
-      console.log(newTranscription);
-        // Make sure the videoId and transcription are valid before making the request
-    //     if (!videoId || !newTranscription) {
-    //       console.log('====================================');
-    // console.log(videoId, newTranscription);
-    // console.log('====================================');
-    //         console.error('Invalid videoId or transcription');
-    //         return;
-    //     }
-
-        const response = await axios.put(
-            `http://172.20.10.4:8080/api/videos/1/transcription`,
-            {
-                transcription: newTranscription,
-            }
-        );
-
-        console.log('Transcription updated successfully:', response.data);
-        Alert.alert('Transcription updated successfully');
-        setIsTranscriptionModalVisible(false);
-    } catch (error) {
-        console.error('Error updating transcription:', error.response ? error.response.data : error.message);
-    }
-};
-  const deleteVideo = async videoId => {
-    if (!videoId || isNaN(videoId)) {
-      console.error('Invalid video ID');
-      return;
-    }
-
-    try {
-      const response = await axios.delete(
-        `http://172.20.10.4:8080/api/videos/delete/${videoId}`,
-      );
-      console.log('Video deleted successfully', response);
-
-      // Show success message
-      Alert.alert('Success', 'Video deleted successfully!', [
+  // Delete video
+  const deleteVideo = async userId => {
+    Alert.alert(
+      'Delete Video', // Title of the alert
+      'Are you sure you want to delete this video?', // Message
+      [
         {
-          text: 'OK',
-          onPress: () => {
-            // Reload the list of videos after deletion
-            fetchUserVideos(userId);
+          text: 'Cancel', // Button label
+          style: 'cancel', // Button style
+          onPress: () => console.log('Delete cancelled'), // Optional cancel action
+        },
+        {
+          text: 'Delete', // Button label
+          style: 'destructive', // Destructive style for the delete button (iOS)
+          onPress: async () => {
+            // Proceed with the deletion
+            try {
+              const response = await fetch(
+                `http://192.168.1.5:8080/api/videos/delete/${userId}`,
+                {
+                  method: 'DELETE',
+                },
+              );
+
+              if (!response.ok) throw new Error('Failed to delete video');
+
+              const message = await response.text();
+              console.log(message); // "Video deleted successfully for userId: <userId>"
+              setHasVideo(false); // Hide the + icon when video is deleted
+              setVideoUri(null); // Clear the video URI
+            } catch (error) {
+              console.error('Error deleting video:', error);
+            }
           },
         },
-      ]);
-    } catch (error) {
-      console.error('Error deleting video:', error);
-      // Show error message in case of failure
-      Alert.alert('Error', 'Failed to delete video. Please try again.');
-    }
+      ],
+      {cancelable: false}, // Prevent dismissing by tapping outside the alert
+    );
   };
 
-  // Render each video item
-  const renderVideoItem = ({item}) => (
-    <View style={styles.videoItem}>
-      <TouchableOpacity
-        onPress={() => {
-          setSelectedVideo(item);
-          setModalVisible(true);
-        }}>
-        <Video
-          source={{uri: 'file://uploads/videos/uploadedVideo.mp4'}} // Play the video using the local URL
-          style={styles.videoPlayer}
-          resizeMode="contain"
-          repeat
-          controls={true}
-        />
-      </TouchableOpacity>
-      <Text style={styles.videoName}>{item.name}</Text>
-      <View style={styles.btnctnr}>
-        <TouchableOpacity
-          style={styles.transcriptionButton}
-          onPress={() => fetchTranscription(item.id)}>
-          <Text style={styles.transcriptionButtonText}>Transcription</Text>
-        </TouchableOpacity>
-        {/* Delete Button */}
-        <TouchableOpacity
-          style={styles.deleteButton}
-          onPress={() => deleteVideo(item.id)}>
-          <Text style={styles.deleteButtonText}>Delete</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-
+  // Update transcription
+  const updateTranscription = async (userId, transcription) => {
+    try {
+      const response = await axios.put(
+        `http://192.168.1.5:8080/api/videos/${userId}/transcription`,
+        {transcription},
+      );
+      console.log('Update successful:', response.data.message);
+      setTranscription(transcription);
+      // Close the transcription modal on successful update
+      setIsTranscriptionModalVisible(false);
+    } catch (error) {
+      console.error(
+        'Error updating transcription:',
+        error.response?.data?.message || error.message,
+      );
+    }
+  };
+  const subtitlesUrl = `http://192.168.1.5:8080/api/videos/${userId}/subtitles.srt`;
   return (
     <View style={styles.container}>
       <View style={{flex: 1}}>
@@ -235,88 +238,81 @@ const Home1 = () => {
       <ImageBackground
         source={require('./assets/login.jpg')}
         style={styles.imageBackground}>
-        <View>
+        <View style={styles.centerContent}>
           {loading ? (
             <ActivityIndicator size="large" color="#000" />
-          ) : (
-            <>
-              <FlatList
-                data={videos}
-                keyExtractor={item => item.id.toString()}
-                renderItem={renderVideoItem}
-                ListEmptyComponent={
-                  <Text style={styles.emptyListText}>No videos available.</Text>
-                }
-                style={styles.videoList}
+          ) : videoUri ? (
+            <TouchableOpacity
+              onPress={() => setModalVisible(true)}
+              style={styles.videoContainer}>
+              <Video
+                source={{uri: videoUri}}
+                style={styles.videoPlayer}
+                resizeMode="contain"
+                controls={true}
+                onProgress={e => setCurrentTime(e.currentTime)} // Track current time
               />
-              {videos.length === 0 && (
-                <TouchableOpacity
-                  style={styles.plusButton}
-                  onPress={() => navigation.navigate('CameraPage', {userId})}>
-                  <Text style={styles.plusButtonText}>+</Text>
-                </TouchableOpacity>
-              )}
-            </>
+              <Text style={styles.subtitle}>{currentSubtitle}</Text>
+            </TouchableOpacity>
+          ) : (
+            <Text style={styles.noVideoText}>
+              No video available for this user.
+            </Text>
+          )}
+          {/* Conditionally render the + icon */}
+          {!hasVideo && (
+            <TouchableOpacity
+              style={styles.plusButton}
+              onPress={() => navigation.navigate('CameraPage', {userId})}>
+              <Text style={styles.plusButtonText}>+</Text>
+            </TouchableOpacity>
+          )}
+          {hasVideo && (
+            <View style={styles.btnContainer}>
+              <TouchableOpacity
+                style={styles.transcriptionButton}
+                onPress={() => fetchTranscription(userId)}>
+                <Share name={'share-social-outline'} size={28} style={styles.transcriptionButtonText}/>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.deleteButton}
+                onPress={() => deleteVideo(userId)}>
+                <Delete  name={'delete-empty-outline'} size={28} style={styles.deleteButtonText}/>
+              </TouchableOpacity>
+            </View>
           )}
         </View>
+      </ImageBackground>
 
-        {/* Modal for playing selected video */}
-        <Modal
-          visible={modalVisible}
-          onRequestClose={() => setModalVisible(false)}
-          animationType="slide"
-          transparent>
-          <View style={styles.modalBackground}>
-            <View style={styles.modalContent}>
-              <Video
-                source={{uri: selectedVideo?.url}}
-                style={styles.modalVideoPlayer}
-                resizeMode="contain"
-                controls
-              />
+      {/* Transcription Modal */}
+      <Modal
+        visible={isTranscriptionModalVisible}
+        animationType="slide"
+        transparent>
+        <View style={styles.modalBackground}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalHeader}>Transcription</Text>
+            <TextInput
+              value={newTranscription || transcription}
+              onChangeText={setNewTranscription}
+              style={styles.input}
+              multiline
+            />
+            <View style={styles.modelbtn}>
+              <TouchableOpacity
+                style={styles.updateButton}
+                onPress={() => updateTranscription(userId, newTranscription)}>
+                <Text style={styles.updateButtonText}>Update</Text>
+              </TouchableOpacity>
               <TouchableOpacity
                 style={styles.closeButton}
-                onPress={() => setModalVisible(false)}>
+                onPress={() => setIsTranscriptionModalVisible(false)}>
                 <Text style={styles.closeButtonText}>Close</Text>
               </TouchableOpacity>
             </View>
           </View>
-        </Modal>
-
-        {/* Transcription Modal */}
-        <Modal
-          visible={isTranscriptionModalVisible}
-          onRequestClose={() => setIsTranscriptionModalVisible(false)}
-          animationType="slide"
-          transparent>
-          <View style={styles.modalBackground}>
-            <View style={styles.modalContent}>
-              <Text style={styles.transcriptionTitle}>Transcription</Text>
-              <TextInput
-                style={styles.transcriptionText}
-                multiline
-                numberOfLines={6}
-                value={transcription}
-                onChangeText={setTranscription}
-              />
-              <View style={styles.modelbtn}>
-                <TouchableOpacity
-                  style={styles.updateButton}
-                  onPress={() =>
-                    updateTranscription(selectedVideo?.id, transcription)
-                  }>
-                  <Text style={styles.updateButtonText}>Update</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.closeButton}
-                  onPress={() => setIsTranscriptionModalVisible(false)}>
-                  <Text style={styles.closeButtonText}>Close</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
-      </ImageBackground>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -344,15 +340,19 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   videoPlayer: {
+    marginLeft: 10,
+    marginRight: 10,
     height: 700,
     borderRadius: 10,
+    elevation: 10,
   },
   transcriptionButton: {
     marginTop: -15,
     backgroundColor: '#2e80d8',
     padding: 10,
-    borderRadius: 5,
+    borderRadius:50,
     marginHorizontal: 10,
+    elevation: 10,
   },
   transcriptionButtonText: {
     color: '#fff',
@@ -368,6 +368,7 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     justifyContent: 'center',
     alignItems: 'center',
+    elevation: 10,
   },
   plusButtonText: {
     fontSize: 40,
@@ -379,6 +380,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     marginTop: '100%',
     color: '#ffffff',
+    elevation: 10,
   },
   modalBackground: {
     flex: 1,
@@ -441,10 +443,11 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     marginTop: -15,
-    backgroundColor: '#2e80d8',
     padding: 10,
-    borderRadius: 5,
     marginHorizontal: 10,
+     backgroundColor: '#2e80d8',
+     borderRadius:50,
+    elevation: 10,
   },
   deleteButtonText: {
     color: '#fff',
@@ -454,6 +457,31 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-evenly',
     width: '100%',
+  },
+  btnContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 30,
+    marginBottom: 20,
+  },
+  noVideoText: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    fontSize: 18,
+    fontWeight: '600',
+    marginLeft: '20%',
+    color: '#ffffff',
+  },
+  subtitle: {
+    position: 'absolute',
+    bottom:50,
+    left: '10%',
+    right: '10%',
+    color: 'white',
+    fontSize: 18,
+    padding: 5,
+    textAlign: 'center',
   },
 });
 

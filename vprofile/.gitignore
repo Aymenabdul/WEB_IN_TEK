@@ -31,3 +31,17 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Ignore all video files
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.flv
+*.wmv
+
+# Ignore the upload folder
+vprofile/uploads
+vprofile/uploads/videos/
+#Ignore this ffmpeg 
+vprofile/bin/ffmpeg.exe

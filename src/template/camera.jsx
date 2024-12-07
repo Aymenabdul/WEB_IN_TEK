@@ -13,10 +13,11 @@ import {
   Camera,
   useCameraDevice,
   useCameraPermission,
+  useCameraFormat,
 } from 'react-native-vision-camera';
 import Flash from 'react-native-vector-icons/MaterialIcons';
 import Video from 'react-native-video';
-import Media from 'react-native-vector-icons/MaterialIcons';
+import Media from 'react-native-vector-icons/Entypo';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 import PlayPause from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -30,7 +31,7 @@ const CameraPage = () => {
 
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-  const [currentTimer, setCurrentTimer] = useState(30); // 30-second timer
+  const [currentTimer, setCurrentTimer] = useState(60); // 30-second timer
   const [onFlash, setOnFlash] = useState('off');
   const [videoPath, setVideoPath] = useState(null); // Store video path
   const [showModal, setShowModal] = useState(false); // Modal visibility
@@ -43,6 +44,10 @@ const CameraPage = () => {
   let timerInterval = useRef(null);
   const device = useCameraDevice(isFrontCamera ? 'front' : 'back');
 
+  const format = useCameraFormat(device,[
+    {fps:20},
+  ]);
+const fps = format.minFps;
   useEffect(() => {
     if (!hasPermission) {
       requestPermission();
@@ -55,16 +60,6 @@ const CameraPage = () => {
     console.log('No camera device found.');
     return <ActivityIndicator style={{flex: 1, justifyContent: 'center', alignItems: 'center'}} />;
   }
-  const fetchUserData = async () => {
-    try {
-      const response = await axios.get(`http://172.20.10.4:8080/api/videos/${userId}`);
-      console.log('Fetched user data:', response.data);
-      setVideos(response.data.videos); // Update the videos state with the fetched data
-    } catch (error) {
-      console.error('Error fetching user data:', error);
-    }
-  };
-
   const handleUploadVideo = async () => {
     if (!videoUri) {
       alert('No video found to upload.');
@@ -86,7 +81,7 @@ const CameraPage = () => {
       formData.append('userId', userId);
 
       const response = await axios.post(
-        'http://172.20.10.4:8080/api/videos/upload',
+        'http://192.168.1.5:8080/api/videos/upload',
         formData,
         {
           headers: {
@@ -100,9 +95,8 @@ const CameraPage = () => {
       const {filePath, fileName, id} = response.data;
       if (filePath && id) {
         alert('Video uploaded successfully!');
-        fetchUserData();
 
-        const videoUrl = `http://172.20.10.4:8080/${filePath.replace(
+        const videoUrl = `http://192.168.1.5:8080/${filePath.replace(
           /\\/g,
           '/',
         )}`;
@@ -115,7 +109,7 @@ const CameraPage = () => {
         navigation.reset({
           index: 0,
           routes: [
-            {name: 'home1', params: {userId, videos: [...videos, newvideos]}},
+            { name: 'home1', params: { userId, videos: [...videos, newvideos] } },
           ],
         });
       } else {
@@ -126,6 +120,9 @@ const CameraPage = () => {
         'Upload Error:',
         error.response ? error.response.data : error.message,
       );
+      console.log('====================================');
+        console.log(error.response);
+        console.log('====================================');
       alert('Error uploading video. Please try again.');
     } finally {
       setUploading(false);
@@ -145,12 +142,12 @@ const CameraPage = () => {
             setVideoPath(video.path);
             setVideoUri(video.path);
             setIsRecording(false);
-            setCurrentTimer(30);
+            setCurrentTimer(60);
           },
           onRecordingError: error => {
             console.error('Recording error:', error);
             setIsRecording(false);
-            setCurrentTimer(30);
+            setCurrentTimer(60);
           },
         });
 
@@ -225,6 +222,8 @@ const CameraPage = () => {
         video={true}
         audio={true} // Ensure audio is enabled
         torch={onFlash}
+        format={format}
+        fps={fps}
       />
 
       {/* Flash Toggle */}
@@ -255,8 +254,7 @@ const CameraPage = () => {
           size={35}
           style={styles.camicon}
         />
-      </TouchableOpacity>
-      <TouchableOpacity
+      </TouchableOpacity><TouchableOpacity
         style={styles.infoButton}>
         <AntDesign
           name={'infocirlce'}
@@ -267,7 +265,7 @@ const CameraPage = () => {
       {/* Timer */}
       <View style={styles.timer}>
         <Text style={styles.timerText}>
-          {isRecording ? currentTimer.toString().padStart(2, '0') : '00:30'}
+          {isRecording ? currentTimer.toString().padStart(2, '0') : '00:60'}
         </Text>
       </View>
       {/* Record Button */}
@@ -281,7 +279,7 @@ const CameraPage = () => {
       </TouchableOpacity>
 
       {/* Pause/Resume Control */}
-      {isRecording && (
+      {/* {isRecording && (
         <View style={styles.controlButtons}>
           <TouchableOpacity
             style={styles.controlButton}
@@ -293,7 +291,7 @@ const CameraPage = () => {
             />
           </TouchableOpacity>
         </View>
-      )}
+      )} */}
 
       {/* Modal for Playback */}
       {videoPath && (
@@ -320,7 +318,7 @@ const CameraPage = () => {
               <TouchableOpacity
                 style={styles.closeModalButton}
                 onPress={() => setShowModal(false)}>
-                <Text style={styles.closeModalText}>Close</Text>
+                <Text style={styles.closeModalText}>Redo</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleUploadVideo}
@@ -349,7 +347,8 @@ const CameraPage = () => {
         <TouchableOpacity
           style={styles.showModalButton}
           onPress={() => setShowModal(true)}>
-          <Media name="photo-library" size={35} color={'white'} />
+          <Media name="eye" size={35} color={'white'} />
+          <Text style={{color:'#ffffff',marginLeft:-8,}}>preview</Text>
         </TouchableOpacity>
       )}
 
@@ -431,7 +430,7 @@ const styles = StyleSheet.create({
     bottom:130,
     padding: 10,
     borderRadius: 5,
-    left:'80%',
+    left:'44%',
   },
   showModalText: {color: 'white', fontSize: 16},
   controlButtons: {

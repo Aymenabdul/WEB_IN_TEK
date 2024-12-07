@@ -240,7 +240,7 @@ const SignupScreen = () => {
 
     try {
       const response = await axios.post(
-        'http://172.20.10.4:8080/users',
+        'http://192.168.1.5:8080/users',
         userData,
         {
           headers: {'Content-Type': 'application/json'},
@@ -283,7 +283,7 @@ const SignupScreen = () => {
     console.log('Checking email:', email); // Log the email you're checking
     try {
       const response = await axios.post(
-        'http://172.20.10.4:8080/users/check-email',
+        'http://192.168.1.5:8080/users/check-email',
         {email}, // Wrapping email in an object
         {headers: {'Content-Type': 'application/json'}},
       );
@@ -299,7 +299,7 @@ const SignupScreen = () => {
     console.log('Checking phoneNumber:', phoneNumber);
     try {
       const response = await axios.post(
-        'http://172.20.10.4:8080/users/check-phone',
+        'http://192.168.1.5:8080/users/check-phone',
         phoneNumber,
         {
           headers: {'Content-Type': 'application/json'},
@@ -616,7 +616,7 @@ const SignupScreen = () => {
                 <TouchableOpacity
                   onPress={() => removeLanguageField(index)}
                   style={styles.removeButton}>
-                  <Text style={styles.removeButtonText}>Remove</Text>
+                  <Text style={styles.removeButtonText}>X</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -1184,10 +1184,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   removeButton: {
-    backgroundColor: '#FF6347',
+    backgroundColor: '#007BFF',
     padding: 5,
     borderRadius: 5,
-    width: 62,
+    width:20,
     marginTop: -3,
     marginBottom: 5,
     alignSelf: 'flex-end',

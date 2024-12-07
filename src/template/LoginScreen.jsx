@@ -46,7 +46,7 @@ const LoginScreen = () => {
     setLoading(true);
     try {
       const response = await axios.post(
-        'http://172.20.10.4:8080/api/login',
+        'http://192.168.1.5:8080/api/login',
         { email, password },
         {
           headers: {
@@ -63,11 +63,11 @@ console.log(response.data);
 console.log('====================================');
       if (firstName && jobOption) {
         // Check jobOption to navigate to the appropriate screen
-        if (jobOption === 'Employee' || jobOption === 'entrepreneur') {
+        if (jobOption === 'Employee' || jobOption === 'Entrepreneur') {
           // await saveStorage(userId)
           navigation.navigate('home1', { firstName, jobOption, userId, profilepic,industry });
-        } else if (jobOption === 'employer' || jobOption === 'investor') {
-          navigation.navigate('home1', { firstName, jobOption, userId, profilepic,industry });
+        } else if (jobOption === 'Employer' || jobOption === 'Investor') {
+          navigation.navigate('HomeScreen', { firstName, jobOption, userId, profilepic,industry });
         }
         setEmail('');
         setPassword('');
@@ -114,7 +114,7 @@ const handleWebViewNavigationStateChange = async (navState) => {
       setShowLinkedInModal(false); // Close the LinkedIn modal
       setLoading(true);
       try {
-        const response = await axios.post('http://172.20.10.4:8080/auth/linkedin', { code });
+        const response = await axios.post('http://192.168.1.5:8080/auth/linkedin', { code });
         const { given_name, email } = response.data;
         console.log('====================================');
         console.log(response.data);
@@ -209,7 +209,7 @@ const handleWebViewNavigationStateChange = async (navState) => {
     </TouchableOpacity>
     </LinearGradient>
       <TouchableOpacity onPress={() => navigation.navigate('SignupScreen')}>
-        <Text style={styles.createAccount}>Don't Have An Account ? <Text style={{color:'blue'}}> SignUp..</Text></Text>
+        <Text style={styles.createAccount}>Don't Have An Account ? <Text style={{color:'blue'}}> SignUp</Text></Text>
       </TouchableOpacity>
 
       {loading && (
