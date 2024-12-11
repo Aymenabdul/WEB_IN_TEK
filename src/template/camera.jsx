@@ -60,7 +60,14 @@ const fps = format.minFps;
     console.log('No camera device found.');
     return <ActivityIndicator style={{flex: 1, justifyContent: 'center', alignItems: 'center'}} />;
   }
+
+  const generateRandomFileName = () => {
+    const timestamp = Date.now(); // Get the current timestamp
+    const randomString = Math.random().toString(36).substring(2, 15); // Generate a random string
+    return `${timestamp}_${randomString}.mp4`; // Combine timestamp and random string to form a unique file name
+  };
   const handleUploadVideo = async () => {
+    const randomFileName = generateRandomFileName();
     if (!videoUri) {
       alert('No video found to upload.');
       return;
@@ -76,7 +83,7 @@ const fps = format.minFps;
       formData.append('file', {
         uri: formattedUri,
         type: 'video/mp4',
-        name: 'uploadedVideo.mp4',
+        name:randomFileName,
       });
       formData.append('userId', userId);
 

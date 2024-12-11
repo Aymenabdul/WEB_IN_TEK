@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 import {
   View,
   StyleSheet,
@@ -8,8 +8,9 @@ import {
   FlatList,
   TouchableOpacity,
   Modal,
-  Button,
+  Alert,
   Image,
+  Linking,
 } from 'react-native';
 import axios from 'axios';
 import {Buffer} from 'buffer';
@@ -17,11 +18,16 @@ import Video from 'react-native-video';
 import Header from './header';
 import {useRoute} from '@react-navigation/native';
 import Ant from 'react-native-vector-icons/AntDesign';
-import Share from 'react-native-vector-icons/Entypo';
+import Shares from 'react-native-vector-icons/Entypo';
 import Like from 'react-native-vector-icons/Foundation';
 import Phone from 'react-native-vector-icons/FontAwesome6';
 import Whatsapp from 'react-native-vector-icons/FontAwesome';
-import {log} from 'console';
+import {
+  GestureHandlerRootView,
+  PanGestureHandler,
+} from 'react-native-gesture-handler';
+import Share from 'react-native-share'; // Import the share module
+import { PermissionsAndroid, Platform } from 'react-native';
 
 const HomeScreen = () => {
   const [loading, setLoading] = useState(true);
@@ -34,13 +40,171 @@ const HomeScreen = () => {
   const [modalProfileImage, setModalProfileImage] = useState(null);
   const [modalFirstName, setModalFirstName] = useState('');
   const [likeCount, setLikeCount] = useState(0);
-  const [isLiked, setIsLiked] = useState(false);
+  const [isLiked, setIsLiked] = useState({});
   const [videoId, setVideoId] = useState(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const sheetRef = useRef(null);
+  const [phoneNumber, setPhoneNumber] = useState(null); // To store owner's phone number
 
   const route = useRoute(); // Access route parameters
+  
 
   // Check if filtered videos are passed in route params
   const {filteredVideos, firstName, industry, userId} = route.params;
+
+  const requestCallPermission = async () => {
+    if (Platform.OS === 'android') {
+      try {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.CALL_PHONE,
+          {
+            title: 'Phone Call Permission',
+            message: 'This app needs access to make phone calls.',
+            buttonNeutral: 'Ask Me Later',
+            buttonNegative: 'Cancel',
+            buttonPositive: 'OK',
+          }
+        );
+        return granted === PermissionsAndroid.RESULTS.GRANTED;
+      } catch (err) {
+        console.warn(err);
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const fetchPhoneNumber = () => {
+    console.log("Fetching phone number for videoId:", videoId); // Log videoId to ensure it's correct
+    axios
+      .get(`http://192.168.1.5:8080/api/videos/getOwnerByVideoId/${videoId}`)
+      .then(response => {
+        console.log('API Response:', response); // Log the entire response
+        if (response.data && response.data.phoneNumber) {
+          setPhoneNumber(response.data.phoneNumber);
+          console.log('Phone number found:', response.data.phoneNumber); // Log the phone number
+        } else {
+          Alert.alert('Error', 'Owner not found or no phone number available.');
+        }
+      })
+      .catch(error => {
+        console.error('Error fetching owner data:', error); // Log the error
+        Alert.alert('Error', 'Failed to fetch owner details.');
+      });
+};
+
+const makeCall = () => {
+  console.log("videoId in makeCall:", videoId);  // Log the videoId being passed
+  if (phoneNumber) {
+    console.log('Making call to:', phoneNumber);
+    Linking.openURL(`tel:${phoneNumber}`).catch(err => {
+      console.error('Error making call:', err);
+      Alert.alert('Error', 'Call failed. Make sure the app has permission to make calls.');
+    });
+  } else {
+    console.log("No phone number, fetching phone number...");  // Log that we're fetching the phone number
+  }
+  fetchPhoneNumber(videoId);
+};
+
+// Function to send a WhatsApp message
+const sendWhatsappMessage = () => {
+  console.log('sendWhatsappMessage function called');  // Log when the function is called
+
+  if (phoneNumber) {
+    const message = `Hello, ${modalFirstName} it's nice to connect with you.`; // Customize your message
+    const url = `whatsapp://send?phone=${phoneNumber}&text=${encodeURIComponent(message)}`;
+
+    console.log('Phone number:', phoneNumber);  // Log the phone number
+    console.log('Message:', message);  // Log the message
+    console.log('Constructed URL:', url);  // Log the URL being used for the WhatsApp message
+
+    Linking.openURL(url).catch(err => {
+      console.error('Error sending WhatsApp message:', err);
+      Alert.alert('Error', 'Failed to send message. Make sure WhatsApp is installed and the phone number is correct.');
+    });
+  } else {
+    console.log("No phone number, fetching phone number...");  // Log that we're fetching the phone number
+  }
+  fetchPhoneNumber(videoId);
+};
+
+  const handleGesture = event => {
+    const {translationY} = event.nativeEvent;
+
+    // Swipe up to go to the next video
+    if (translationY < -100) {
+      // Swiped up (threshold can be adjusted)
+      moveToNextVideo();
+    }
+
+    // Swipe down to go to the previous video
+    if (translationY > 100) {
+      // Swiped down (threshold can be adjusted)
+      moveToPreviousVideo();
+    }
+  };
+
+  const moveToNextVideo = () => {
+    if (currentIndex < videosToDisplay.length - 1) {
+      const nextIndex = currentIndex + 1;
+      setCurrentIndex(nextIndex); // Move to the next video
+      setSelectedVideoUri(videosToDisplay[nextIndex].uri);
+      // Update the profile image and name for the next video
+      setModalProfileImage(videosToDisplay[nextIndex].modelprofileImage); // Assuming each video has a profile image
+      setModalFirstName(videosToDisplay[nextIndex].modelfirstName); // Assuming each video has a firstName
+    }
+  };
+
+  const moveToPreviousVideo = () => {
+    if (currentIndex > 0) {
+      const prevIndex = currentIndex - 1;
+      setCurrentIndex(prevIndex); // Move to the previous video
+      setSelectedVideoUri(videosToDisplay[prevIndex].uri);
+
+      // Update the profile image and name for the previous video
+      setModalProfileImage(videosToDisplay[prevIndex].modalProfileImage); // Assuming each video has a profile image
+      setModalFirstName(videosToDisplay[prevIndex].modelfirstName); // Assuming each video has a firstName
+    }
+  };
+
+  // useEffect(() => {
+  //   console.log('selectedVideoUri:', selectedVideoUri);
+  //   console.log('currentIndex:', currentIndex);
+  //   console.log('videosToDisplay:', videosToDisplay);
+
+  //   if (
+  //     selectedVideoUri &&
+  //     currentIndex >= 0 &&
+  //     currentIndex < videosToDisplay.length
+  //   ) {
+  //     const currentVideo = videosToDisplay[currentIndex];
+  //     console.log('currentVideo:', currentVideo);
+
+  //     // Fallback in case the properties are missing
+  //     const profileImage =
+  //       currentVideo?.modelProfileImage || 'defaultProfileImageUrl';
+  //     const firstName = currentVideo?.modelFirstName || 'Default Name';
+
+  //     setModalProfileImage(profileImage);
+  //     setModalFirstName(firstName);
+  //   }
+  // }, [selectedVideoUri, currentIndex, videosToDisplay]);
+
+  const fetchLikeStatus = async () => {
+    try {
+      const response = await axios.get(
+        `http://192.168.1.5:8080/api/videos/likes/status`,
+        {
+          params: {userId},
+        },
+      );
+      const likeStatus = response.data; // Expecting { videoId: true/false }
+      setIsLiked(likeStatus); // Set initial like status
+    } catch (error) {
+      console.error('Error fetching like status:', error);
+    }
+  };
 
   useEffect(() => {
     if (!filteredVideos) {
@@ -50,40 +214,62 @@ const HomeScreen = () => {
     fetchProfilePic(userId);
   }, [filteredVideos, userId]);
 
-  useEffect(() => {
-    if (!videoId) {
-      console.error('Invalid videoId');
-      return; // Exit early if videoId is null or undefined
-    }
-
-    console.log('Fetching like count for videoId:', videoId); // Debugging
-
+  const fetchLikeCount = videoId => {
+    console.log('Fetching like count for videoId:', videoId); // Check if the videoId is correct
     axios
       .get(`http://192.168.1.5:8080/api/videos/${videoId}/like-count`)
       .then(response => {
-        setLikeCount(response.data.likeCount);
+        console.log('API response:', response.data);
+        setLikeCount(response.data); // Update state with the correct count
       })
       .catch(error => {
         console.error('Error fetching like count:', error);
       });
-  }, [videoId]); // Dependency array, effect triggers when videoId changes
+  };
 
-  const handleLike = () => {
-    console.log('User ID:', userId); // Log userId
-    console.log('Video ID:', videoId); // Log videoId
+  const handleLike = async () => {
+    const newLikedState = !isLiked[videoId]; // Toggle the like status
+    setIsLiked(prevState => ({
+      ...prevState,
+      [videoId]: newLikedState,
+    }));
 
-    // Add like to the video using query parameters
-    axios
-      .post(`http://192.168.1.5:8080/api/videos/${videoId}/like`, null, {
-        params: {userId}, // Pass userId as a query parameter
-      })
-      .then(() => {
-        setIsLiked(true);
-        setLikeCount(likeCount + 1); // Increment like count
-      })
-      .catch(error => {
-        console.error('Error liking video:', error);
-      });
+    try {
+      if (newLikedState) {
+        // If liked, send like request
+        await axios.post(
+          `http://192.168.1.5:8080/api/videos/${videoId}/like`,
+          null,
+          {params: {userId}},
+        );
+        setLikeCount(prevCount => prevCount + 1); // Increment like count
+      }
+    } catch (error) {
+      console.error('Error toggling like:', error);
+    }
+  };
+
+  // Handle dislike action
+  const handleDislike = async () => {
+    const newLikedState = !isLiked[videoId]; // Toggle the dislike status (opposite of like)
+    setIsLiked(prevState => ({
+      ...prevState,
+      [videoId]: newLikedState,
+    }));
+
+    try {
+      if (!newLikedState) {
+        // If disliked, send dislike request
+        await axios.post(
+          `http://192.168.1.5:8080/api/videos/${videoId}/dislike`,
+          null,
+          {params: {userId}},
+        );
+        setLikeCount(prevCount => prevCount - 1); // Decrement like count (dislike removes like)
+      }
+    } catch (error) {
+      console.error('Error toggling dislike:', error);
+    }
   };
 
   const openModal = async (uri, videoId) => {
@@ -97,7 +283,7 @@ const HomeScreen = () => {
       );
 
       // Log response data for debugging
-      console.log('Fetched user details:', response.data);
+      // console.log('Fetched user details:', response.data);
 
       const {firstName: fetchedFirstName, profileImage: fetchedProfileImage} =
         response.data;
@@ -117,6 +303,8 @@ const HomeScreen = () => {
       setModalProfileImage(null);
     } finally {
       // Set modal visibility and selected video URI
+      fetchLikeCount(videoId);
+      fetchLikeStatus(videoId);
       setSelectedVideoUri(uri);
       setIsModalVisible(true);
     }
@@ -149,21 +337,24 @@ const HomeScreen = () => {
 
   const fetchVideos = async () => {
     try {
-      const response = await fetch(
-        'http://192.168.1.5:8080/api/videos/videos',
-      );
-      if (!response.ok) throw new Error('Failed to fetch videos');
+      const response = await fetch('http://192.168.1.5:8080/api/videos/videos');
+      if (!response.ok)
+        throw new Error(`Failed to fetch videos: ${response.statusText}`);
 
       const videoData = await response.json();
+      console.log('Video Data:', videoData); // Log to check response structure
+
       if (Array.isArray(videoData) && videoData.length > 0) {
         const videoURIs = videoData.map(video => ({
           id: video.id,
           title: video.title || 'Untitled Video',
-          uri: `http://192.168.1.5:8080/api/videos/user/${video.id}`,
+          uri: `http://192.168.1.5:8080/api/videos/user/${video.userId}`,
         }));
+        console.log('Generated URIs:', videoURIs); // Log generated URLs
         setVideoUrl(videoURIs);
         setHasVideo(true);
       } else {
+        console.warn('No videos available');
         setVideoUrl([]);
         setHasVideo(false);
       }
@@ -174,12 +365,25 @@ const HomeScreen = () => {
       setLoading(false);
     }
   };
-
   const closeModal = () => {
+    // fetchLikeCount();
+    //   fetchLikeStatus();
     setIsModalVisible(false);
     setSelectedVideoUri(null);
   };
+  const shareOption = async () => {
+    const share = {
+      title: 'Share User Video',
+      message: `Check out this video shared by ${firstName}`,
+      url: selectedVideoUri, // Must be a valid URI
+    };
 
+    try {
+      const shareResponse = await Share.open(share);
+      console.log('Share successful:', shareResponse);
+    } catch (error) {
+    }
+  };
   // Use filteredVideos if passed, otherwise use fetched videos
   const videosToDisplay = filteredVideos
     ? filteredVideos.map(video => ({
@@ -218,7 +422,7 @@ const HomeScreen = () => {
               </TouchableOpacity>
             )}
             keyExtractor={item => item.id.toString()}
-            numColumns={3}
+            numColumns={4}
             contentContainerStyle={styles.videoList}
           />
         ) : (
@@ -232,50 +436,62 @@ const HomeScreen = () => {
         animationType="fade"
         transparent={true}
         onRequestClose={closeModal}>
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <View style={styles.userDetails}>
-              {modalProfileImage && (
-                <Image
-                  source={{uri: modalProfileImage}}
-                  style={styles.profileImage}
-                />
-              )}
-              <Text style={styles.userName}>{modalFirstName}</Text>
+        <GestureHandlerRootView>
+          <PanGestureHandler onGestureEvent={handleGesture}>
+            <View style={styles.modalContainer}>
+              <View style={styles.modalContent}>
+                <View style={styles.userDetails}>
+                  {modalProfileImage && (
+                    <Image
+                      source={{uri: modalProfileImage}}
+                      style={styles.profileImage}
+                    />
+                  )}
+                  <Text style={styles.userName}>{modalFirstName}</Text>
+                </View>
+                <View style={styles.fullScreen}>
+                  <Video
+                    source={{uri: selectedVideoUri}}
+                    style={styles.fullScreenVideo}
+                    controls
+                    resizeMode="cover"
+                    onError={error =>
+                      console.error('Video playback error:', error)
+                    }
+                  />
+                  <TouchableOpacity
+                    onPress={closeModal}
+                    style={styles.buttoncls}>
+                    <Ant name={'arrowleft'} style={styles.buttoncls} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() =>
+                      isLiked[videoId] ? handleDislike() : handleLike()
+                    }>
+                    <Like
+                      name={'heart'}
+                      style={[
+                        styles.buttonheart,
+                        {color: isLiked[videoId] ? 'red' : 'white'}, // Dynamically change color
+                      ]}
+                    />
+                    <Text style={styles.count}>{likeCount}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={shareOption}>
+                    <Shares name={'share'} style={styles.buttonshare} />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={sendWhatsappMessage}>
+                    <Whatsapp name={'whatsapp'} style={styles.buttonmsg} />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={makeCall}>
+                    <Phone name={'phone-volume'} style={styles.buttonphone} />
+                  </TouchableOpacity>
+                </View>
+              </View>
             </View>
-            <View style={styles.fullScreen}>
-              <Video
-                source={{uri: selectedVideoUri}}
-                style={styles.fullScreenVideo}
-                controls
-                resizeMode="cover"
-                onError={error => console.error('Video playback error:', error)}
-              />
-              <TouchableOpacity onPress={closeModal} style={styles.buttoncls}>
-                <Ant name={'arrowleft'} style={styles.buttoncls} />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleLike}>
-                <Like
-                  name={'heart'}
-                  style={[
-                    styles.buttonheart,
-                    {color: isLiked ? 'red' : 'white'}, // Change color based on `liked` state
-                  ]}
-                />
-                <Text style={styles.count}>{likeCount}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={''}>
-                <Share name={'share'} style={styles.buttonshare} />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={''}>
-                <Whatsapp name={'whatsapp'} style={styles.buttonmsg} />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={''}>
-                <Phone name={'phone-volume'} style={styles.buttonphone} />
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
+          </PanGestureHandler>
+        </GestureHandlerRootView>
       </Modal>
     </View>
   );
@@ -288,7 +504,9 @@ const styles = StyleSheet.create({
   },
   videoItem: {
     flex: 1,
-    margin: 1, // Spacing between videos
+    margin: 1,
+    marginTop:-30,
+    marginBottom:5, // Spacing between videos
   },
   videoPlayer: {
     height: 230,
@@ -299,7 +517,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   videoList: {
-    paddingHorizontal: 10, // Padding around the list
+    paddingHorizontal:2, // Padding around the list
     paddingTop: 10,
   },
   emptyListText: {

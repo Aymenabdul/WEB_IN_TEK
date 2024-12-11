@@ -41,7 +41,7 @@ build/
 *.wmv
 
 # Ignore the upload folder
-vprofile/uploads
-vprofile/uploads/videos/
+/upload/
+
 #Ignore this ffmpeg 
 vprofile/bin/ffmpeg.exe

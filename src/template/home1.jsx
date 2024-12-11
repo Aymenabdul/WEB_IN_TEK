@@ -9,6 +9,7 @@ import {
   TextInput,
   ImageBackground,
   Alert,
+  Linking,
 } from 'react-native';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import Header from './header';
@@ -16,7 +17,11 @@ import axios from 'axios';
 import {Buffer} from 'buffer';
 import Video from 'react-native-video';
 import Delete from 'react-native-vector-icons/MaterialCommunityIcons';
-import Share from 'react-native-vector-icons/Ionicons';
+import Shares from 'react-native-vector-icons/Ionicons';
+import Share from 'react-native-share';
+import Like from 'react-native-vector-icons/Foundation';
+import Phone from 'react-native-vector-icons/FontAwesome6';
+import Whatsapp from 'react-native-vector-icons/FontAwesome';
 
 const Home1 = () => {
   const navigation = useNavigation();
@@ -35,6 +40,10 @@ const Home1 = () => {
   const [currentTime, setCurrentTime] = useState(0);
   const [subtitles, setSubtitles] = useState([]);
   const [currentSubtitle, setCurrentSubtitle] = useState('');
+  const [likeCount, setLikeCount] = useState(0);
+  const [isLiked, setIsLiked] = useState({});
+  const [videoId, setVideoId] = useState(null);
+  const [phoneNumber, setPhoneNumber] = useState(null);
 
   useEffect(() => {
     if (userId) {
@@ -46,28 +55,7 @@ const Home1 = () => {
     }
   }, [userId]);
 
-
   // Function to parse SRT subtitle format
-  const parseSRT = srtText => {
-    const lines = srtText.split('\n');
-    const parsedSubtitles = [];
-    let i = 0;
-
-    while (i < lines.length) {
-      if (lines[i].match(/\d+/)) {
-        const startEnd = lines[i + 1].split(' --> ');
-        const startTime = parseTimeToSeconds(startEnd[0]);
-        const endTime = parseTimeToSeconds(startEnd[1]);
-        const text = lines[i + 2];
-        parsedSubtitles.push({startTime, endTime, text});
-        i += 4;
-      } else {
-        i++;
-      }
-    }
-
-    return parsedSubtitles;
-  };
   // Function to convert time format to seconds
   const parseTimeToSeconds = timeStr => {
     const [hours, minutes, seconds] = timeStr.split(':');
@@ -88,8 +76,29 @@ const Home1 = () => {
     setCurrentSubtitle(activeSubtitle ? activeSubtitle.text : '');
   }, [currentTime, subtitles]);
 
-   // Fetch subtitles when component is mounted
-   useEffect(() => {
+  // Fetch subtitles when component is mounted
+  useEffect(() => {
+    const parseSRT = srtText => {
+      const lines = srtText.split('\n');
+      const parsedSubtitles = [];
+      let i = 0;
+
+      while (i < lines.length) {
+        if (lines[i].match(/\d+/)) {
+          const startEnd = lines[i + 1].split(' --> ');
+          const startTime = parseTimeToSeconds(startEnd[0]);
+          const endTime = parseTimeToSeconds(startEnd[1]);
+          const text = lines[i + 2];
+          parsedSubtitles.push({startTime, endTime, text});
+          i += 4;
+        } else {
+          i++;
+        }
+      }
+
+      return parsedSubtitles;
+    };
+
     const fetchSubtitles = async () => {
       try {
         const response = await fetch(subtitlesUrl);
@@ -101,7 +110,7 @@ const Home1 = () => {
       }
     };
     fetchSubtitles();
-  },[subtitlesUrl]);
+  }, [subtitlesUrl]);
 
   // Fetch profile image
   const fetchProfilePic = async userId => {
@@ -226,6 +235,193 @@ const Home1 = () => {
     }
   };
   const subtitlesUrl = `http://192.168.1.5:8080/api/videos/${userId}/subtitles.srt`;
+
+  const shareOption = async () => {
+    const share = {
+      title: 'Share User Video',
+      message: `Check out this video shared by ${firstName}`,
+      url: videoUri, // Must be a valid URI
+    };
+
+    try {
+      const shareResponse = await Share.open(share);
+      console.log('Share successful:', shareResponse);
+    } catch (error) {
+      console.error('Error sharing video:', error);
+    }
+  };
+
+  //Reactions full code................................................................................................................
+
+  useEffect(() => {
+    const fetchVideoId = async () => {
+      try {
+        const response = await axios.get(`http://192.168.1.5:8080/api/videos/getVideoIdsByUserId/${userId}`);
+        if (response.data && response.data.length > 0) {
+          setVideoId(response.data[0]); // Assuming the videoId is the first element, adjust as needed
+        } else {
+          console.log('No video found for this user');
+        }
+      } catch (err) {
+        console.error('Error fetching video data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchVideoId();
+  }, [userId]);
+
+  const fetchPhoneNumber = () => {
+    axios
+      .get(`http://192.168.1.5:8080/api/videos/getOwnerByUserId/${userId}`) // Adjust if needed to match your API
+      .then(response => {
+        console.log('API Response:', response); // Log the entire response
+
+        if (response.data && response.data.phoneNumber) {
+          setPhoneNumber(response.data.phoneNumber);
+          console.log('Phone number found:', response.data.phoneNumber); // Log the phone number
+        } else {
+          Alert.alert('Error', 'Owner not found or no phone number available.');
+        }
+
+        // If you also want to set the video ID, make sure it comes from the response
+        if (response.data && response.data.videoId) {
+          console.log('Video ID:', response.data.videoId); // Log the videoId
+          // Set the videoId (make sure to define state or variable for it)
+          setVideoId(response.data.videoId); // Assuming you have a setVideoId function
+        } else {
+          Alert.alert('Error', 'No video ID found for this user.');
+        }
+      })
+      .catch(error => {
+        console.error('Error fetching owner data:', error); // Log the error
+        Alert.alert('Error', 'Failed to fetch owner details.');
+      });
+  };
+
+  const makeCall = () => {
+    if (phoneNumber) {
+      console.log('Making call to:', phoneNumber);
+      Linking.openURL(`tel:${phoneNumber}`).catch(err => {
+        console.error('Error making call:', err);
+        Alert.alert(
+          'Error',
+          'Call failed. Make sure the app has permission to make calls.',
+        );
+      });
+    } else {
+      console.log('No phone number, fetching phone number...'); // Log that we're fetching the phone number
+    }
+    fetchPhoneNumber(userId);
+  };
+
+  // Function to send a WhatsApp message
+  const sendWhatsappMessage = () => {
+    console.log('sendWhatsappMessage function called'); // Log when the function is called
+
+    if (phoneNumber) {
+      const message = `Hello, ${firstName} it's nice to connect with you.`; // Customize your message
+      const url = `whatsapp://send?phone=${phoneNumber}&text=${encodeURIComponent(
+        message,
+      )}`;
+
+      console.log('Phone number:', phoneNumber); // Log the phone number
+      console.log('Message:', message); // Log the message
+      console.log('Constructed URL:', url); // Log the URL being used for the WhatsApp message
+
+      Linking.openURL(url).catch(err => {
+        console.error('Error sending WhatsApp message:', err);
+        Alert.alert(
+          'Error',
+          'Failed to send message. Make sure WhatsApp is installed and the phone number is correct.',
+        );
+      });
+    } else {
+      console.log('No phone number, fetching phone number...'); // Log that we're fetching the phone number
+    }
+    fetchPhoneNumber(userId);
+  };
+
+  const fetchLikeCount = videoId => {
+    console.log('Fetching like count for videoId:', videoId); // Check if the videoId is correct
+    axios
+      .get(`http://192.168.1.5:8080/api/videos/${videoId}/like-count`)
+      .then(response => {
+        console.log('API response:', response.data);
+        setLikeCount(response.data); // Update state with the correct count
+      })
+      .catch(error => {
+        console.error('Error fetching like count:', error);
+      });
+  };
+
+  useEffect(() => {
+    const fetchLikeStatus = async () => {
+      try {
+        const response = await axios.get(
+          `http://192.168.1.5:8080/api/videos/likes/status`,
+          {
+            params: {userId},
+          },
+        );
+        const likeStatus = response.data; // Expecting { videoId: true/false }
+        setIsLiked(likeStatus); // Set initial like status
+      } catch (error) {
+        console.error('Error fetching like status:', error);
+      }
+    };
+    if (userId && videoId) {
+      fetchLikeStatus(videoId);  // Fetch like status when userId or videoId is available
+      fetchLikeCount(videoId);  // Fetch like count for the specific video
+    }
+  }, [userId,videoId]);
+
+  const handleLike = async () => {
+    const newLikedState = !isLiked[videoId];
+    setIsLiked(prevState => ({
+      ...prevState,
+      [videoId]: newLikedState,
+    }));
+
+    try {
+      if (newLikedState) {
+        // If liked, send like request
+        await axios.post(
+          `http://192.168.1.5:8080/api/videos/${videoId}/like`,
+          null,
+          {params: {userId}},
+        );
+        setLikeCount(prevCount => prevCount + 1); // Increment like count
+      }
+    } catch (error) {
+      console.error('Error toggling like:', error);
+    }
+  };
+
+  // Handle dislike action
+  const handleDislike = async () => {
+    const newLikedState = !isLiked[videoId]; // Toggle the dislike status (opposite of like)
+    setIsLiked(prevState => ({
+      ...prevState,
+      [videoId]: newLikedState,
+    }));
+
+    try {
+      if (!newLikedState) {
+        // If disliked, send dislike request
+        await axios.post(
+          `http://192.168.1.5:8080/api/videos/${videoId}/dislike`,
+          null,
+          {params: {userId}},
+        );
+        setLikeCount(prevCount => prevCount - 1); // Decrement like count (dislike removes like)
+      }
+    } catch (error) {
+      console.error('Error toggling dislike:', error);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <View style={{flex: 1}}>
@@ -252,6 +448,25 @@ const Home1 = () => {
                 controls={true}
                 onProgress={e => setCurrentTime(e.currentTime)} // Track current time
               />
+              <TouchableOpacity
+                onPress={() =>
+                  isLiked[userId] ? handleDislike() : handleLike()
+                }>
+                <Like
+                  name={'heart'}
+                  style={[
+                    styles.buttonheart,
+                    {color: isLiked[videoId] ? 'red' : 'white'}, // Dynamically change color
+                  ]}
+                />
+                <Text style={styles.count}>{likeCount}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={sendWhatsappMessage}>
+                <Whatsapp name={'whatsapp'} style={styles.buttonmsg} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={makeCall}>
+                <Phone name={'phone-volume'} style={styles.buttonphone} />
+              </TouchableOpacity>
               <Text style={styles.subtitle}>{currentSubtitle}</Text>
             </TouchableOpacity>
           ) : (
@@ -271,13 +486,21 @@ const Home1 = () => {
             <View style={styles.btnContainer}>
               <TouchableOpacity
                 style={styles.transcriptionButton}
-                onPress={() => fetchTranscription(userId)}>
-                <Share name={'share-social-outline'} size={28} style={styles.transcriptionButtonText}/>
+                onPress={shareOption}>
+                <Shares
+                  name={'share-social-outline'}
+                  size={28}
+                  style={styles.transcriptionButtonText}
+                />
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.deleteButton}
                 onPress={() => deleteVideo(userId)}>
-                <Delete  name={'delete-empty-outline'} size={28} style={styles.deleteButtonText}/>
+                <Delete
+                  name={'delete-empty-outline'}
+                  size={28}
+                  style={styles.deleteButtonText}
+                />
               </TouchableOpacity>
             </View>
           )}
@@ -350,7 +573,7 @@ const styles = StyleSheet.create({
     marginTop: -15,
     backgroundColor: '#2e80d8',
     padding: 10,
-    borderRadius:50,
+    borderRadius: 50,
     marginHorizontal: 10,
     elevation: 10,
   },
@@ -445,8 +668,8 @@ const styles = StyleSheet.create({
     marginTop: -15,
     padding: 10,
     marginHorizontal: 10,
-     backgroundColor: '#2e80d8',
-     borderRadius:50,
+    backgroundColor: '#2e80d8',
+    borderRadius: 50,
     elevation: 10,
   },
   deleteButtonText: {
@@ -475,13 +698,53 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     position: 'absolute',
-    bottom:50,
+    bottom: 50,
     left: '10%',
     right: '10%',
     color: 'white',
     fontSize: 18,
     padding: 5,
     textAlign: 'center',
+  },
+  buttoncls: {
+    color: '#ffffff',
+    position: 'absolute',
+    top: 15,
+    right: '89%',
+    fontSize: 24,
+    fontWeight: '900',
+  },
+  buttonheart: {
+    position: 'absolute',
+    bottom: 200,
+    right: '5%',
+    color: '#ffffff',
+    paddingRight: 20,
+    fontSize: 30,
+  },
+  buttonphone: {
+    position: 'absolute',
+    bottom: 148,
+    right: '5%',
+    paddingRight: 20,
+    color: '#ffffff',
+    fontSize: 22,
+  },
+  buttonmsg: {
+    position: 'absolute',
+    bottom: 90,
+    right: '5%',
+    paddingRight: 20,
+    color: '#ffffff',
+    fontSize: 30,
+  },
+  count: {
+    position: 'absolute',
+    right: 20,
+    color: '#ffffff',
+    padding: 28,
+    bottom: 155,
+    fontWeight: '900',
   },
 });
 

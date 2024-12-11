@@ -32,5 +32,9 @@ public class UserService {
     public boolean isPhoneExists(String phoneNumber) {
         return userRepository.existsByPhoneNumber(phoneNumber);
     }
+
+    public User getUserById(Long userId) {
+        return userRepository.findById(userId).orElse(null);
+    }
     
 }

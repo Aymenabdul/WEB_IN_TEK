@@ -20,25 +20,18 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 public class VideoService {
@@ -86,7 +79,8 @@ public class VideoService {
 
         // Read the compressed video file as bytes (this is the compressed version)
         byte[] compressedVideoBytes = java.nio.file.Files.readAllBytes(tempCompressedFile.toPath());
-        System.out.println("Compressed video file size: " + compressedVideoBytes.length); // Log the size of the compressed video
+        System.out.println("Compressed video file size: " + compressedVideoBytes.length); // Log the size of the
+                                                                                          // compressed video
 
         // Extract audio and perform transcription (same as before)
         String audioUrl = extractAudioWithTransloadit(videoFilePath);
@@ -99,7 +93,8 @@ public class VideoService {
         System.out.println("Transcription completed: " + transcription);
 
         // Create the Video entity (save the compressed video)
-        Video video = new Video(file.getOriginalFilename(), compressedVideoBytes, userId, transcription, downloadedAudioPath);
+        Video video = new Video(file.getOriginalFilename(), compressedVideoBytes, userId, transcription,
+                downloadedAudioPath);
 
         // Set the file path to the original path (no change)
         video.setFilePath(videoFilePath.toString());
@@ -113,7 +108,6 @@ public class VideoService {
         // Save and return the video
         return videoRepository.save(video);
     }
-
 
     private void validateUser(Long userId) {
         System.out.println("Validating user with ID: " + userId);
@@ -149,26 +143,27 @@ public class VideoService {
         try {
             // Start the assembly
             AssemblyResponse response = assembly.save();
-        
+
             // Poll for assembly completion
             while (!response.isFinished()) {
                 Thread.sleep(5000);
                 response = transloadit.getAssemblyByUrl(response.getSslUrl());
             }
-        
+
             // Log the full response for debugging
             System.out.println("Full Response JSON: " + response.json().toString(2));
-        
+
             // Check if 'results' and 'extracted-audio' exist in the JSON response
             if (response.json().has("results") && response.json().getJSONObject("results").has("extracted-audio")) {
                 // Get the extracted audio array
-                JSONArray extractedAudioArray = response.json().getJSONObject("results").getJSONArray("extracted-audio");
+                JSONArray extractedAudioArray = response.json().getJSONObject("results")
+                        .getJSONArray("extracted-audio");
 
                 // Check if the array has at least one audio object
                 if (extractedAudioArray.length() > 0) {
                     // Access the first audio object
                     JSONObject audioObject = extractedAudioArray.getJSONObject(0);
-                    
+
                     // Get the audio URL from the audio object
                     String audioUrl = audioObject.getString("url");
                     System.out.println("Extracted Audio URL: " + audioUrl);
@@ -177,7 +172,8 @@ public class VideoService {
                     throw new IOException("Audio extraction failed: 'extracted-audio' array is empty.");
                 }
             } else {
-                throw new IOException("Audio extraction failed: 'results' or 'extracted-audio' key not found in the response.");
+                throw new IOException(
+                        "Audio extraction failed: 'results' or 'extracted-audio' key not found in the response.");
             }
         } catch (RequestException | LocalOperationException | InterruptedException e) {
             throw new IOException("Error during Transloadit execution: " + e.getMessage());
@@ -196,7 +192,7 @@ public class VideoService {
 
         // Download the audio file
         try (InputStream in = new URL(audioUrl).openStream();
-             FileOutputStream out = new FileOutputStream(audioFilePath.toFile())) {
+                FileOutputStream out = new FileOutputStream(audioFilePath.toFile())) {
             byte[] buffer = new byte[1024];
             int bytesRead;
             while ((bytesRead = in.read(buffer, 0, buffer.length)) != -1) {
@@ -229,8 +225,8 @@ public class VideoService {
         System.out.println("Transcription text: " + transcript.getText().orElse("No transcription text available"));
         return transcript.getText().orElse("No transcription text available");
     }
-    
-   public ResponseEntity<InputStreamResource> streamVideo(Long userId, String rangeHeader) {
+
+    public ResponseEntity<InputStreamResource> streamVideo(Long userId, String rangeHeader) {
         // Fetch video record from the database
         Optional<Video> videoOptional = videoRepository.findByUserId(userId);
 
@@ -280,17 +276,15 @@ public class VideoService {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
-    
-    
-    
-     // Fetch transcription of a video
-     public String getTranscriptionByUserId(Long userId) {
+
+    // Fetch transcription of a video
+    public String getTranscriptionByUserId(Long userId) {
         Optional<Video> videoOptional = videoRepository.findByUserId(userId);
-    
+
         if (videoOptional.isEmpty()) {
             throw new IllegalArgumentException("Video not found for the user");
         }
-    
+
         Video video = videoOptional.get();
         System.out.println("Fetched video transcription: " + video.getTranscription());
         return video.getTranscription();
@@ -315,6 +309,7 @@ public class VideoService {
         // Save updated video
         return videoRepository.save(video);
     }
+
     public boolean deleteVideoByUserId(Long userId) {
         // Fetch the video associated with the userId
         Optional<Video> videoOptional = videoRepository.findByUserId(userId);
@@ -333,44 +328,44 @@ public class VideoService {
 
     public List<Video> getAllVideos() {
         // Fetch all videos from the database
-        return videoRepository.findAll();  // Assuming you're using JPA repository to fetch the data
+        return videoRepository.findAll(); // Assuming you're using JPA repository to fetch the data
     }
 
     String generateSRT(String transcription) {
         System.out.println("Starting SRT generation for transcription: " + transcription);
-    
+
         // Split transcription into lines
         String[] lines = transcription.split("\\.\\s+");
         System.out.println("Split transcription into " + lines.length + " lines.");
-    
+
         StringBuilder srtBuilder = new StringBuilder();
         int startTime = 0;
         double wordsPerSecond = 2.0; // Average speaking rate in words per second
-    
+
         for (int i = 0; i < lines.length; i++) {
             int wordCount = lines[i].split("\\s+").length;
             int duration = (int) Math.ceil(wordCount / wordsPerSecond); // Calculate duration dynamically
             int endTime = startTime + duration;
-    
+
             // Append SRT entry
             srtBuilder.append(i + 1).append("\n")
                     .append(formatTime(startTime)).append(" --> ").append(formatTime(endTime)).append("\n")
                     .append(lines[i]).append("\n\n");
-    
+
             System.out.println("Added SRT entry " + (i + 1) + ":");
             System.out.println("Start time: " + formatTime(startTime));
             System.out.println("End time: " + formatTime(endTime));
             System.out.println("Text: " + lines[i]);
-    
+
             startTime = endTime; // Move to the next start time
         }
-    
+
         String srtContent = srtBuilder.toString();
         System.out.println("Generated SRT content:\n" + srtContent);
-    
+
         return srtContent;
     }
-    
+
     private String formatTime(int seconds) {
         int hours = seconds / 3600;
         int minutes = (seconds % 3600) / 60;
@@ -387,10 +382,10 @@ public class VideoService {
         System.out.println("Experience: " + experience);
         System.out.println("Industry: " + industry);
         System.out.println("City: " + city);
-    
+
         // Call the repository method to perform the filtering
         List<Video> videos = videoRepository.findByFilters(keySkills, experience, industry, city);
-    
+
         // Log the result of the filter operation
         System.out.println("Filtered videos count: " + (videos != null ? videos.size() : 0));
         if (videos != null && !videos.isEmpty()) {
@@ -399,10 +394,10 @@ public class VideoService {
                 System.out.println("Video ID: " + video.getId() + ", File Name: " + video.getFileName());
             }
         }
-    
+
         return videos;
     }
-    
+
     public void addLike(Long userId, Long videoId) {
         // Check if the user already liked the video
         System.out.println("Checking if user " + userId + " has already liked video " + videoId);
@@ -410,7 +405,7 @@ public class VideoService {
             System.out.println("User " + userId + " has already liked video " + videoId);
             throw new IllegalArgumentException("User has already liked this video");
         }
-    
+
         // Add the like to the likes table
         Like like = new Like();
         like.setUserId(userId);
@@ -419,7 +414,34 @@ public class VideoService {
         likeRepository.save(like);
         System.out.println("Like saved successfully for user " + userId + " on video " + videoId);
     }
-    
+
+    public void addDislike(Long userId, Long videoId) {
+        // Check if the user has already liked or disliked the video
+        Optional<Like> existingLike = likeRepository.findByUserIdAndVideoId(userId, videoId);
+
+        if (existingLike.isPresent()) {
+            Like like = existingLike.get();
+
+            // If the user liked the video, remove the like and add the dislike
+            if (like.getIsLike()) {
+                // Remove the like
+                likeRepository.delete(like);
+
+                // Add a new dislike (mark as isLike=false)
+                Like dislike = new Like(userId, videoId, videoId, null, false); // false means dislike
+                likeRepository.save(dislike);
+            } else {
+                // If the user already disliked the video, just remove the dislike (no action
+                // needed)
+                likeRepository.delete(like);
+            }
+        } else {
+            // If no like/dislike exists, add a new dislike
+            Like dislike = new Like(userId, videoId, videoId, null, false); // false indicates dislike
+            likeRepository.save(dislike);
+        }
+    }
+
     // Get the total number of likes for a video
     public Long getLikeCount(Long videoId) {
         System.out.println("Fetching like count for video " + videoId);
@@ -427,6 +449,13 @@ public class VideoService {
         System.out.println("Total likes for video " + videoId + ": " + likeCount);
         return likeCount;
     }
-    
-}
+    public Video getVideoById(Long videoId) {
+        return videoRepository.findById(videoId).orElse(null);
+    }
 
+    public List<Long> getVideoIdsByUserId(Long userId) {
+        // Retrieve the list of video IDs associated with the user
+        return videoRepository.findVideoIdsByUserId(userId); // Custom query to fetch video IDs
+    }
+
+}

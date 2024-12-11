@@ -1,16 +1,12 @@
 package com.example.vprofile;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
@@ -35,6 +31,12 @@ public class VideoController {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private LikeRepository likeRepository;
+
+    @Autowired
+    private UserService userService;
 
     @Autowired
     public VideoController(FFmpegService ffmpegService, VideoService videoService) {
@@ -141,59 +143,49 @@ public class VideoController {
         return ResponseEntity.ok("Video deleted successfully for userId: " + userId);
     }
     @GetMapping("/videos")
-    public ResponseEntity<List<Map<String, Object>>> getAllVideos() {
-        System.out.println("Received request for fetching all videos");
-    
-        // Fetch all video entities from the database
-        List<Video> videoEntities = videoService.getAllVideos();
-    
-        if (videoEntities.isEmpty()) {
-            System.out.println("No videos found in the database");
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
-        }
-    
-        // Log the number of videos fetched from the database
-        System.out.println("Number of video entities fetched: " + videoEntities.size());
-    
-        // Prepare the response list
-        List<Map<String, Object>> videoResponses = new ArrayList<>();
-        System.out.println("Preparing response for each video entity...");
-    
-        for (Video videoEntity : videoEntities) {
-            // Log each video entity being processed
-            System.out.println("Processing video entity with ID: " + videoEntity.getId());
-    
-            Map<String, Object> videoData = new HashMap<>();
-            videoData.put("id", videoEntity.getId());
-            videoData.put("filePath", videoEntity.getFilePath());
-            videoData.put("fileName", videoEntity.getFileName());
-            videoData.put("transcription", videoEntity.getTranscription());
-            videoData.put("userId", videoEntity.getUserId());
-    
-            // Inline Base64 encoding of video data
-            if (videoEntity.getVideoData() != null) {
-                System.out.println("Encoding video data to Base64 for video ID: " + videoEntity.getId());
-                String base64Video = Base64.getEncoder().encodeToString(videoEntity.getVideoData());
-                videoData.put("videoData", "data:video/mp4;base64," + base64Video);
-    
-                // Log the size of the encoded Base64 string
-                System.out.println("Base64 Video Data Length: " + base64Video.length());
-            } else {
-                System.out.println("No video data available for video ID: " + videoEntity.getId());
-                videoData.put("videoData", null);
-            }
-    
-            videoResponses.add(videoData);
-        }
-    
-        System.out.println("Number of videos to return in response: " + videoResponses.size());
-    
-        // Log completion of processing
-        System.out.println("Successfully prepared video responses. Returning the response...");
-    
-        // Return the response
-        return ResponseEntity.ok(videoResponses);
+public ResponseEntity<List<Map<String, Object>>> getAllVideos() {
+    System.out.println("Received request for fetching all videos");
+
+    // Fetch all video entities from the database
+    List<Video> videoEntities = videoService.getAllVideos();
+
+    if (videoEntities.isEmpty()) {
+        System.out.println("No videos found in the database");
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
+
+    // Log the number of videos fetched from the database
+    System.out.println("Number of video entities fetched: " + videoEntities.size());
+
+    // Prepare the response list
+    List<Map<String, Object>> videoResponses = new ArrayList<>();
+    System.out.println("Preparing response for each video entity...");
+
+    for (Video videoEntity : videoEntities) {
+        // Log each video entity being processed
+        System.out.println("Processing video entity with ID: " + videoEntity.getId());
+
+        Map<String, Object> videoData = new HashMap<>();
+        videoData.put("id", videoEntity.getId());
+        videoData.put("filePath", videoEntity.getFilePath());
+        videoData.put("fileName", videoEntity.getFileName());
+        videoData.put("transcription", videoEntity.getTranscription());
+        videoData.put("userId", videoEntity.getUserId());
+
+        // Add the video data map to the response list
+        videoResponses.add(videoData);
+    }
+
+    // Log the number of videos prepared for the response
+    System.out.println("Number of videos to return in response: " + videoResponses.size());
+
+    // Log completion of processing
+    System.out.println("Successfully prepared video responses. Returning the response...");
+
+    // Return the response with the list of video data
+    return ResponseEntity.ok(videoResponses);
+}
+
     
 
 @GetMapping("/{userId}/subtitles.srt")
@@ -272,9 +264,97 @@ public ResponseEntity<List<Video>> filterVideos(@RequestBody User user) {
         return ResponseEntity.ok().body("Liked the video");
     }
 
+    @PostMapping("/{videoId}/dislike")
+public ResponseEntity<String> dislikeVideo(@PathVariable Long videoId, @RequestParam Long userId) {
+    videoService.addDislike(userId, videoId);  // Calls the addDislike method in VideoService
+    return ResponseEntity.ok("Disliked the video");
+}
+
     @GetMapping("/{videoId}/like-count")
     public ResponseEntity<Long> getLikeCount(@PathVariable Long videoId) {
+        // Debugging: Log the videoId
+        System.out.println("Received videoId: " + videoId);
+    
+        // Fetch the like count
         Long likeCount = videoService.getLikeCount(videoId);
+    
+        // Debugging: Log the like count
+        System.out.println("Fetched like count for videoId " + videoId + ": " + likeCount);
+    
         return ResponseEntity.ok(likeCount);
     }
+
+    @GetMapping("/likes/status")
+public Map<Long, Boolean> getLikeStatus(@RequestParam Long userId) {
+    List<Video> allVideos = videoService.getAllVideos();
+    Map<Long, Boolean> likeStatus = new HashMap<>();
+
+    for (Video video : allVideos) {
+        boolean isLiked = likeRepository.existsByUserIdAndVideoId(userId, video.getId());
+        System.out.println("Video ID: " + video.getId() + ", Is Liked: " + isLiked);
+        likeStatus.put(video.getId(), isLiked);
+    }
+    return likeStatus;
+}
+
+@GetMapping("/getOwnerByVideoId/{videoId}")
+    public ResponseEntity<User> getOwnerByVideoId(@PathVariable("videoId") Long videoId) {
+        try {
+            // Retrieve the video by videoId
+            Video video = videoService.getVideoById(videoId);
+            if (video == null) {
+                return ResponseEntity.notFound().build(); // Return 404 if video not found
+            }
+
+            // Get the user (owner) based on the userId associated with the video
+            Long userId = video.getUserId();
+            User user = userService.getUserById(userId);
+
+            if (user == null) {
+                return ResponseEntity.notFound().build(); // Return 404 if user not found
+            }
+
+            // Return the user data (owner) including phone number associated with the video
+            return ResponseEntity.ok(user);
+        } catch (Exception e) {
+            // Handle any errors
+            return ResponseEntity.status(500).body(null);
+        }
+    }
+
+    @GetMapping("/getOwnerByUserId/{userId}")
+public ResponseEntity<User> getOwnerByUserId(@PathVariable("userId") Long userId) {
+    try {
+        // Retrieve the user by userId
+        User user = userService.getUserById(userId);
+
+        if (user == null) {
+            return ResponseEntity.notFound().build(); // Return 404 if user not found
+        }
+
+        // Return the user data (owner) including phone number
+        return ResponseEntity.ok(user);
+    } catch (Exception e) {
+        // Handle any errors
+        return ResponseEntity.status(500).body(null);
+    }
+}
+@GetMapping("/getVideoIdsByUserId/{userId}")
+    public ResponseEntity<?> getVideoIdsByUserId(@PathVariable("userId") Long userId) {
+        try {
+            // Retrieve the list of video IDs associated with the user
+            List<Long> videoIds = videoService.getVideoIdsByUserId(userId);
+
+            if (videoIds.isEmpty()) {
+                return ResponseEntity.noContent().build(); // Return 204 if no videos found
+            }
+
+            // Return the list of video IDs
+            return ResponseEntity.ok(videoIds);
+        } catch (Exception e) {
+            // Handle any errors
+            return ResponseEntity.status(500).body("Error fetching video IDs: " + e.getMessage());
+        }
+    }
+
 }

@@ -20,17 +20,21 @@ public class Like {
     @Column(name = "videoId", nullable = false)
     private Long videoId;
 
+    private boolean isLike;
+
     @Column(name = "createdAt", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
     public Like() {
     }
 
-    public Like(Long id, Long userId, Long videoId, LocalDateTime createdAt) {
+    public Like(Long id, Long userId, Long videoId, LocalDateTime createdAt,boolean isLike) {
         this.id = id;
         this.userId = userId;
         this.videoId = videoId;
         this.createdAt = createdAt;
+        this.isLike = isLike;
+
     }
 
     public Long getId() {
@@ -65,6 +69,12 @@ public class Like {
         this.createdAt = createdAt;
     }
 
-    // Optionally override toString(), equals(), and hashCode() if needed
+    public boolean getIsLike() {
+        return isLike;
+    }
+
+    public void setIsLike(boolean isLike) {
+        this.isLike = isLike;
+    }
 }
 
