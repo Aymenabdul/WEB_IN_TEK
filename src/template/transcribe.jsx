@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   StyleSheet,
@@ -11,11 +11,11 @@ import {
   Alert,
   Linking,
 } from 'react-native';
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useNavigation, useRoute } from '@react-navigation/native';
+import {useNavigation, useRoute} from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Header from './header';
 import axios from 'axios';
-import { Buffer } from 'buffer';
+import {Buffer} from 'buffer';
 import Video from 'react-native-video';
 import Delete from 'react-native-vector-icons/MaterialCommunityIcons';
 import Shares from 'react-native-vector-icons/Ionicons';
@@ -29,10 +29,10 @@ import notifee from '@notifee/react-native';
 const Home1 = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  // const {firstName, industry, userId} = route.params;
-  const [ firstName, setFirstName ] = useState();
-  const [ industry, setIndustry ] = useState();
-  const [ userId, setUserId ] = useState();
+//   const {firstName, industry, userId} = route.params;
+const [ firstName, setFirstName ] = useState();
+const [ industry, setIndustry ] = useState();
+const [ userId, setUserId ] = useState();
   const [videoUri, setVideoUri] = useState(null);
   const [loading, setLoading] = useState(true);
   const [profileImage, setProfileImage] = useState(null);
@@ -50,6 +50,25 @@ const Home1 = () => {
   const [isLiked, setIsLiked] = useState({});
   const [videoId, setVideoId] = useState(null);
   const [phoneNumber, setPhoneNumber] = useState(null);
+
+  useEffect(() => {
+    const Asyncstorage = async () => {
+      try {
+        // const {firstName, industry, userId} = route.params;
+        const apiFirstName = await AsyncStorage.getItem('firstName');
+        const apiindustry = await AsyncStorage.getItem('industry');
+        const apiUserId = await AsyncStorage.getItem('userId');
+        setFirstName(apiFirstName);
+        setIndustry(apiindustry);
+        setUserId(apiUserId);
+      } catch (error) {
+        console.log('====================================');
+        console.log('Error', error);
+        console.log('====================================');
+      }
+    }
+    Asyncstorage();
+  }, [])
 
   useEffect(() => {
     if (userId) {
@@ -95,7 +114,7 @@ const Home1 = () => {
           const startTime = parseTimeToSeconds(startEnd[0]);
           const endTime = parseTimeToSeconds(startEnd[1]);
           const text = lines[i + 2];
-          parsedSubtitles.push({ startTime, endTime, text });
+          parsedSubtitles.push({startTime, endTime, text});
           i += 4;
         } else {
           i++;
@@ -165,7 +184,10 @@ const Home1 = () => {
   };
 
   // Fetch transcription
-  const fetchTranscription = async userId => {
+  const fetchTranscription = async () => {
+    console.log('====================================');
+    console.log('transcription userId',userId);
+    console.log('====================================');
     try {
       const response = await axios.get(
         `http://192.168.1.9:8080/api/videos/${userId}/transcription`,
@@ -182,52 +204,14 @@ const Home1 = () => {
     }
   };
 
-  // Delete video
-  const deleteVideo = async userId => {
-    Alert.alert(
-      'Delete Video', // Title of the alert
-      'Are you sure you want to delete this video?', // Message
-      [
-        {
-          text: 'Cancel', // Button label
-          style: 'cancel', // Button style
-          onPress: () => console.log('Delete cancelled'), // Optional cancel action
-        },
-        {
-          text: 'Delete', // Button label
-          style: 'destructive', // Destructive style for the delete button (iOS)
-          onPress: async () => {
-            // Proceed with the deletion
-            try {
-              const response = await fetch(
-                `http://192.168.1.9:8080/api/videos/delete/${userId}`,
-                {
-                  method: 'DELETE',
-                },
-              );
-
-              if (!response.ok) throw new Error('Failed to delete video');
-
-              const message = await response.text();
-              console.log(message); // "Video deleted successfully for userId: <userId>"
-              setHasVideo(false); // Hide the + icon when video is deleted
-              setVideoUri(null); // Clear the video URI
-            } catch (error) {
-              console.error('Error deleting video:', error);
-            }
-          },
-        },
-      ],
-      { cancelable: false }, // Prevent dismissing by tapping outside the alert
-    );
-  };
+  
 
   // Update transcription
   const updateTranscription = async (userId, transcription) => {
     try {
       const response = await axios.put(
         `http://192.168.1.9:8080/api/videos/${userId}/transcription`,
-        { transcription },
+        {transcription},
       );
       console.log('Update successful:', response.data.message);
       setTranscription(transcription);
@@ -368,7 +352,7 @@ const Home1 = () => {
         const response = await axios.get(
           `http://192.168.1.9:8080/api/videos/likes/status`,
           {
-            params: { userId },
+            params: {userId},
           },
         );
         const likeStatus = response.data; // Expecting { videoId: true/false }
@@ -381,7 +365,7 @@ const Home1 = () => {
       fetchLikeStatus(videoId);  // Fetch like status when userId or videoId is available
       fetchLikeCount(videoId);  // Fetch like count for the specific video
     }
-  }, [userId, videoId]);
+  }, [userId,videoId]);
 
   const handleLike = async () => {
     const newLikedState = !isLiked[videoId]; // Toggle the like status
@@ -401,43 +385,35 @@ const Home1 = () => {
         setLikeCount(prevCount => prevCount + 1); // Increment like count
   
         // Trigger notification for video owner (after the like request is successful)
+        await triggerOwnerNotification();
       }
     } catch (error) {
       console.error('Error toggling like:', error);
     }
   };
 
-  const checkForNotifications = async () => {
-    try {
-      const notifications = JSON.parse(await AsyncStorage.getItem('likeNotifications')) || [];
-      if (notifications.length > 0) {
-        // Display the latest notification
-        const { videoId, firstName  } = notifications.pop();
-  
-        await notifee.displayNotification({
-          title: 'wezume',
-          body: `Your video has been liked by ${firstName}.`,
-          android: {
-            channelId: 'owner-channel',
-            smallIcon: 'ic_launcher',
-            importance: 4,
-          },
-        });
-  
-        // Save back the remaining notifications
-        await AsyncStorage.setItem('likeNotifications', JSON.stringify(notifications));
-      }
-    } catch (error) {
-      console.error('Error checking for notifications:', error);
-    }
-  };
+  // Function to trigger notification for the video owner
+const triggerOwnerNotification = async () => {
+  try {
+    console.log('Triggering notification for the video owner...');
 
-  useEffect(() => {
-    const intervalId = setInterval(checkForNotifications, 5000); // Check every 5 seconds
-  
-    return () => clearInterval(intervalId); // Cleanup on unmount
-  }, []);
+    await notifee.displayNotification({
+      title: 'wezume',
+      body: `Your video has been liked by ${firstName}.`,
+      android: {
+        channelId: 'owner-channel',  // Assuming 'owner-channel' was created previously
+        smallIcon: 'ic_launcher',
+        importance: 4,  // HIGH importance for visibility
+        vibrate: true,
+      },
+    });
 
+    console.log('Owner notification triggered.');
+  } catch (error) {
+    console.log('Error triggering notification for owner:', error);
+  }
+};
+  
 
   // Handle dislike action
   const handleDislike = async () => {
@@ -462,28 +438,9 @@ const Home1 = () => {
     }
   };
 
-  useEffect(() => {
-    const Asyncstorage = async () => {
-      try {
-        // const {firstName, industry, userId} = route.params;
-        const apiFirstName = await AsyncStorage.getItem('firstName');
-        const apiindustry = await AsyncStorage.getItem('industry');
-        const apiUserId = await AsyncStorage.getItem('userId');
-        setFirstName(apiFirstName);
-        setIndustry(apiindustry);
-        setUserId(apiUserId);
-      } catch (error) {
-        console.log('====================================');
-        console.log('Error', error);
-        console.log('====================================');
-      }
-    }
-    Asyncstorage();
-  }, [])
-
   return (
     <View style={styles.container}>
-      <View style={{ flex: 1 }}>
+      <View style={{flex: 1}}>
         <Header
           profile={profileImage}
           userName={firstName}
@@ -501,32 +458,12 @@ const Home1 = () => {
               onPress={() => setModalVisible(true)}
               style={styles.videoContainer}>
               <Video
-                source={{ uri: videoUri }}
+                source={{uri: videoUri}}
                 style={styles.videoPlayer}
                 resizeMode="contain"
                 controls={true}
                 onProgress={e => setCurrentTime(e.currentTime)} // Track current time
               />
-              <Text style={styles.subtitle}>{currentSubtitle}</Text>
-              <TouchableOpacity
-                    onPress={() =>
-                      isLiked[videoId] ? handleDislike() : handleLike()
-                    }>
-                    <Like
-                      name={'heart'}
-                      style={[
-                        styles.buttonheart,
-                        {color: isLiked[videoId] ? 'red' : 'white'}, // Dynamically change color
-                      ]}
-                    />
-                    <Text style={styles.count}>{likeCount}</Text>
-                  </TouchableOpacity>
-              <TouchableOpacity onPress={sendWhatsappMessage}>
-                <Whatsapp name={'whatsapp'} style={styles.buttonmsg} />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={makeCall}>
-                <Phone name={'phone-volume'} style={styles.buttonphone} />
-              </TouchableOpacity>
               <Text style={styles.subtitle}>{currentSubtitle}</Text>
             </TouchableOpacity>
           ) : (
@@ -534,33 +471,17 @@ const Home1 = () => {
               No video available for this user.
             </Text>
           )}
-          {/* Conditionally render the + icon */}
-          {!hasVideo && (
-            <TouchableOpacity
-              style={styles.plusButton}
-              onPress={() => navigation.navigate('CameraPage', { userId })}>
-              <Text style={styles.plusButtonText}>+</Text>
-            </TouchableOpacity>
-          )}
           {hasVideo && (
             <View style={styles.btnContainer}>
               <TouchableOpacity
                 style={styles.transcriptionButton}
-                onPress={shareOption}>
-                <Shares
-                  name={'share-social-outline'}
-                  size={28}
-                  style={styles.transcriptionButtonText}
-                />
+                onPress={() => fetchTranscription(userId)}>
+                <Text style={styles.transcriptionButtonText}>Check Transcription</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.deleteButton}
-                onPress={() => deleteVideo(userId)}>
-                <Delete
-                  name={'delete-empty-outline'}
-                  size={28}
-                  style={styles.deleteButtonText}
-                />
+                onPress={() =>navigation.navigate('home1')}>
+                <Text style={{color:'white'}}>Done</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -633,7 +554,7 @@ const styles = StyleSheet.create({
     marginTop: -15,
     backgroundColor: '#2e80d8',
     padding: 10,
-    borderRadius: 50,
+    borderRadius:10,
     marginHorizontal: 10,
     elevation: 10,
   },

@@ -30,6 +30,8 @@ import Share from 'react-native-share'; // Import the share module
 import { PermissionsAndroid, Platform } from 'react-native';
 import notifee from '@notifee/react-native';
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 
 const HomeScreen = () => {
   const [loading, setLoading] = useState(true);
@@ -247,34 +249,25 @@ const sendWhatsappMessage = () => {
         setLikeCount(prevCount => prevCount + 1); // Increment like count
   
         // Trigger notification for video owner (after the like request is successful)
-        await triggerOwnerNotification();
+        await saveLikeNotification(videoId, firstName);
       }
     } catch (error) {
       console.error('Error toggling like:', error);
     }
   };
 
-  // Function to trigger notification for the video owner
-const triggerOwnerNotification = async () => {
-  try {
-    console.log('Triggering notification for the video owner...');
-
-    await notifee.displayNotification({
-      title: 'wezume',
-      body: `Your video has been liked by ${firstName}.`,
-      android: {
-        channelId: 'owner-channel',  // Assuming 'owner-channel' was created previously
-        smallIcon: 'ic_launcher',
-        importance: 4,  // HIGH importance for visibility
-        vibrate: true,
-      },
-    });
-
-    console.log('Owner notification triggered.');
-  } catch (error) {
-    console.log('Error triggering notification for owner:', error);
-  }
-};
+  const saveLikeNotification = async (videoId, firstName) => {
+    try {
+      const notifications = JSON.parse(await AsyncStorage.getItem('likeNotifications')) || [];
+      notifications.push({ videoId,firstName, timestamp: Date.now() });
+      await AsyncStorage.setItem('likeNotifications', JSON.stringify(notifications));
+      console.log('====================================');
+      console.log(firstName);
+      console.log('====================================');
+    } catch (error) {
+      console.error('Error saving notification:', error);
+    }
+  };
 
   // Handle dislike action
   const handleDislike = async () => {

@@ -16,7 +16,7 @@ import FastImage from 'react-native-fast-image';
 import axios from 'axios'; // Import Axios
 import { WebView } from 'react-native-webview'; // Import WebView for LinkedIn OAuth
 import { useNavigation } from '@react-navigation/native';
-// import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const LoginScreen = () => {
   const navigation = useNavigation();
@@ -24,16 +24,6 @@ const LoginScreen = () => {
   const [password, setPassword] = useState('');
   const [showLinkedInModal, setShowLinkedInModal] = useState(false);
   const [loading, setLoading] = useState(false);
-
-
-  // async storage
-  // const saveStorage = async (userId) => {
-  //   try{
-  //     await AsyncStorage.setItem('userId', userId);
-  //   } catch(error){
-  //     console.log(error);
-  //   }
-  // }
 
 
   // Function to handle standard login
@@ -64,9 +54,10 @@ console.log('====================================');
       if (firstName && jobOption) {
         // Check jobOption to navigate to the appropriate screen
         if (jobOption === 'Employee' || jobOption === 'Entrepreneur') {
-          // await saveStorage(userId)
-          navigation.navigate('home1', { firstName, jobOption, userId, profilepic,industry });
+          await saveStorage(userId, firstName, jobOption, profilepic, industry)
+          navigation.navigate('home1');
         } else if (jobOption === 'Employer' || jobOption === 'Investor') {
+          await saveStorage(userId, firstName, jobOption, profilepic, industry)
           navigation.navigate('HomeScreen', { firstName, jobOption, userId, profilepic,industry });
         }
         setEmail('');
@@ -82,6 +73,19 @@ console.log('====================================');
       setLoading(false);
     }
   };
+
+  // async storage
+  const saveStorage = async (userId, firstName, jobOption, profilepic, industry) => {
+    try{
+      await AsyncStorage.setItem('userId', JSON.stringify(userId));
+      await AsyncStorage.setItem('firstName', firstName);
+      await AsyncStorage.setItem('jobOption', jobOption);
+      await AsyncStorage.setItem('profilepic', profilepic);
+      await AsyncStorage.setItem('industry', industry);
+    } catch(error){
+      console.log(error);
+    }
+  }
 
   // Function to initiate LinkedIn login
   const handleLinkedInLogin = () => {

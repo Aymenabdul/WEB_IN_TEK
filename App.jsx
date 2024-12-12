@@ -9,6 +9,7 @@ import OnboardingScreen from './src/template/onboarding';
 import CameraScreen from './src/template/camera';
 import Profile from './src/template/Profile';
 import notifee from '@notifee/react-native';
+import Transcribe from './src/template/transcribe'
 const Stack = createNativeStackNavigator();
 const App = () => {
   useEffect(() => {
@@ -41,6 +42,7 @@ const App = () => {
           <Stack.Screen name="home1" component={home1} />
           <Stack.Screen name="CameraPage" component={CameraScreen} />
           <Stack.Screen name="profile" component={Profile} />
+          <Stack.Screen name="Transcribe" component={Transcribe}/>
         </Stack.Navigator>
       </NavigationContainer>
   );

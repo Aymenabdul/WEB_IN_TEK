@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useRef} from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
   StyleSheet,
   Platform,
 } from 'react-native';
-import {useNavigation, useRoute} from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import {
   Camera,
   useCameraDevice,
@@ -26,7 +26,7 @@ import axios from 'axios';
 const CameraPage = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const {userId} = route.params || null;
+  const { userId } = route.params || null;
   console.log('UserId passed:', userId); // Log UserId
 
   const [isRecording, setIsRecording] = useState(false);
@@ -40,14 +40,14 @@ const CameraPage = () => {
   const [videoUri, setVideoUri] = useState('');
   const [videos, setVideos] = useState([]);
   const cameraRef = useRef(null);
-  const {hasPermission, requestPermission} = useCameraPermission();
+  const { hasPermission, requestPermission } = useCameraPermission();
   let timerInterval = useRef(null);
   const device = useCameraDevice(isFrontCamera ? 'front' : 'back');
 
-  const format = useCameraFormat(device,[
-    {fps:20},
+  const format = useCameraFormat(device, [
+    { fps: 20 },
   ]);
-const fps = format.minFps;
+  const fps = format.minFps;
   useEffect(() => {
     if (!hasPermission) {
       requestPermission();
@@ -58,7 +58,7 @@ const fps = format.minFps;
 
   if (!device) {
     console.log('No camera device found.');
-    return <ActivityIndicator style={{flex: 1, justifyContent: 'center', alignItems: 'center'}} />;
+    return <ActivityIndicator style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }} />;
   }
 
   const generateRandomFileName = () => {
@@ -83,7 +83,7 @@ const fps = format.minFps;
       formData.append('file', {
         uri: formattedUri,
         type: 'video/mp4',
-        name:randomFileName,
+        name: randomFileName,
       });
       formData.append('userId', userId);
 
@@ -99,7 +99,7 @@ const fps = format.minFps;
 
       console.log('Upload Response:', response.data);
 
-      const {filePath, fileName, id} = response.data;
+      const { filePath, fileName, id } = response.data;
       if (filePath && id) {
         alert('Video uploaded successfully!');
 
@@ -116,9 +116,10 @@ const fps = format.minFps;
         navigation.reset({
           index: 0,
           routes: [
-            { name: 'home1', params: { userId, videos: [...videos, newvideos] } },
+            { name: 'Transcribe', params: { userId, videos: [...videos, newvideos] } },
           ],
         });
+    setCurrentTimer(60); // Reset the timer
       } else {
         alert('Unexpected response from server. Missing required fields.');
       }
@@ -128,8 +129,8 @@ const fps = format.minFps;
         error.response ? error.response.data : error.message,
       );
       console.log('====================================');
-        console.log(error.response);
-        console.log('====================================');
+      console.log(error.response);
+      console.log('====================================');
       alert('Error uploading video. Please try again.');
     } finally {
       setUploading(false);
@@ -149,12 +150,10 @@ const fps = format.minFps;
             setVideoPath(video.path);
             setVideoUri(video.path);
             setIsRecording(false);
-            setCurrentTimer(60);
           },
           onRecordingError: error => {
             console.error('Recording error:', error);
             setIsRecording(false);
-            setCurrentTimer(60);
           },
         });
 
@@ -225,7 +224,7 @@ const fps = format.minFps;
         ref={cameraRef}
         device={device}
         isActive={true}
-        style={{position: 'absolute', height: '100%', width: '100%'}}
+        style={{ position: 'absolute', height: '100%', width: '100%' }}
         video={true}
         audio={true} // Ensure audio is enabled
         torch={onFlash}
@@ -310,7 +309,7 @@ const fps = format.minFps;
           <View style={styles.modalContainer}>
             <Text style={styles.modalHeader}>Play Recorded Video</Text>
             <Video
-              source={{uri: videoPath}}
+              source={{ uri: videoPath }}
               style={styles.videoPlayer}
               controls={true}
               resizeMode="contain"
@@ -324,7 +323,10 @@ const fps = format.minFps;
               }}>
               <TouchableOpacity
                 style={styles.closeModalButton}
-                onPress={() => setShowModal(false)}>
+                onPress={() => {
+                  setShowModal(false); // Close the modal
+                  setCurrentTimer(60); // Reset the timer
+                }}>
                 <Text style={styles.closeModalText}>Redo</Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -350,12 +352,12 @@ const fps = format.minFps;
       )}
 
       {/* Show Modal Button */}
-      {videoPath && !isRecording && (
+      {videoPath && !isRecording && currentTimer <=30 && (
         <TouchableOpacity
           style={styles.showModalButton}
           onPress={() => setShowModal(true)}>
           <Media name="eye" size={35} color={'white'} />
-          <Text style={{color:'#ffffff',marginLeft:-8,}}>preview</Text>
+          <Text style={{ color: '#ffffff', marginLeft: -8, }}>preview</Text>
         </TouchableOpacity>
       )}
 
@@ -392,9 +394,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  exitText: {color: 'white', fontSize: 20, fontWeight: 'bold'},
-  timer: {position: 'absolute', bottom: '90%'},
-  timerText: {color: 'white', fontSize: 24, fontWeight: '700'},
+  exitText: { color: 'white', fontSize: 20, fontWeight: 'bold' },
+  timer: { position: 'absolute', bottom: '90%' },
+  timerText: { color: 'white', fontSize: 24, fontWeight: '700' },
   recordButton: {
     position: 'absolute',
     bottom: 50,
@@ -404,7 +406,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 30,
   },
-  recording: {backgroundColor: 'red', borderWidth: 2, borderColor: 'white'},
+  recording: { backgroundColor: 'red', borderWidth: 2, borderColor: 'white' },
   notRecording: {
     backgroundColor: 'white',
     borderWidth: 2,
@@ -423,27 +425,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#000',
   },
-  modalHeader: {color: 'white', fontSize: 20, marginBottom: 20},
-  videoPlayer: {width: '100%', height: '70%'},
+  modalHeader: { color: 'white', fontSize: 20, marginBottom: 20 },
+  videoPlayer: { width: '100%', height: '70%' },
   closeModalButton: {
     backgroundColor: 'red',
     padding: 10,
     borderRadius: 5,
     marginTop: 20,
   },
-  closeModalText: {color: 'white', fontSize: 16},
+  closeModalText: { color: 'white', fontSize: 16 },
   showModalButton: {
     position: 'absolute',
-    bottom:130,
+    bottom: 130,
     padding: 10,
     borderRadius: 5,
-    left:'44%',
+    left: '44%',
   },
-  showModalText: {color: 'white', fontSize: 16},
+  showModalText: { color: 'white', fontSize: 16 },
   controlButtons: {
     position: 'absolute',
-    bottom:120,
-    right:145,
+    bottom: 120,
+    right: 145,
     // flexDirection: 'row',
     width: '100%',
     // backgroundColor:'pink',
@@ -480,16 +482,16 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 20,
     left: '50%',
-    transform: [{translateX: -50}],
+    transform: [{ translateX: -50 }],
     backgroundColor: '#000',
     padding: 10,
     borderRadius: 10,
   },
-  infoButton:{
+  infoButton: {
     position: 'absolute',
     bottom: 20,
     left: '50%',
-    transform: [{translateX: -50}],
+    transform: [{ translateX: -50 }],
     padding: 10,
   },
   switchCameraText: {
@@ -499,13 +501,13 @@ const styles = StyleSheet.create({
   camicon: {
     color: '#ffffff',
     position: 'absolute',
-    bottom:40,
-    right:90,
+    bottom: 40,
+    right: 90,
   },
-  infoicon:{
-    color:'#ffffff',
-    left:176,
-    bottom:38,
+  infoicon: {
+    color: '#ffffff',
+    left: 176,
+    bottom: 38,
   },
 });
 
