@@ -88,7 +88,7 @@ const fps = format.minFps;
       formData.append('userId', userId);
 
       const response = await axios.post(
-        'http://192.168.1.5:8080/api/videos/upload',
+        'http://192.168.1.9:8080/api/videos/upload',
         formData,
         {
           headers: {
@@ -103,7 +103,7 @@ const fps = format.minFps;
       if (filePath && id) {
         alert('Video uploaded successfully!');
 
-        const videoUrl = `http://192.168.1.5:8080/${filePath.replace(
+        const videoUrl = `http://192.168.1.9:8080/${filePath.replace(
           /\\/g,
           '/',
         )}`;

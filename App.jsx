@@ -8,8 +8,29 @@ import home1 from './src/template/home1';
 import OnboardingScreen from './src/template/onboarding';
 import CameraScreen from './src/template/camera';
 import Profile from './src/template/Profile';
+import notifee from '@notifee/react-native';
 const Stack = createNativeStackNavigator();
 const App = () => {
+  useEffect(() => {
+    // Create the notification channel for the video owner when the app starts
+    const createNotificationChannel = async () => {
+      try {
+        console.log('Creating notification channel for the owner...');
+        await notifee.createChannel({
+          id: 'owner-channel',
+          name: 'Owner Notifications',
+          importance:4, // High priority for immediate attention
+          sound: 'default', // Default sound for notifications
+          vibrate: true, // Enable vibration
+        });
+        console.log('Owner channel created successfully!');
+      } catch (error) {
+        console.error('Error creating owner notification channel:', error);
+      }
+    };
+
+    createNotificationChannel();
+  }, []);
   return (
       <NavigationContainer>
         <Stack.Navigator screenOptions={{headerShown: false}}>

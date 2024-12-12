@@ -10,7 +10,7 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
-                .allowedOrigins("http://wezume.in:8080")  // Replace with your frontend's URL if different
+                .allowedOrigins("http://192.168.1.9:8080")  // Replace with your frontend's URL if different
                 .allowedMethods("GET", "POST", "PUT", "DELETE")
                 .allowedHeaders("*");
     }

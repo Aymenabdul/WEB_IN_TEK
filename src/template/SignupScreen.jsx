@@ -240,7 +240,7 @@ const SignupScreen = () => {
 
     try {
       const response = await axios.post(
-        'http://192.168.1.5:8080/users',
+        'http://192.168.1.9:8080/users',
         userData,
         {
           headers: {'Content-Type': 'application/json'},
@@ -283,7 +283,7 @@ const SignupScreen = () => {
     console.log('Checking email:', email); // Log the email you're checking
     try {
       const response = await axios.post(
-        'http://192.168.1.5:8080/users/check-email',
+        'http://192.168.1.9:8080/users/check-email',
         {email}, // Wrapping email in an object
         {headers: {'Content-Type': 'application/json'}},
       );
@@ -299,7 +299,7 @@ const SignupScreen = () => {
     console.log('Checking phoneNumber:', phoneNumber);
     try {
       const response = await axios.post(
-        'http://192.168.1.5:8080/users/check-phone',
+        'http://192.168.1.9:8080/users/check-phone',
         phoneNumber,
         {
           headers: {'Content-Type': 'application/json'},
@@ -341,7 +341,7 @@ const SignupScreen = () => {
   return (
     <FastImage
       style={styles.backgroundImage}
-      source={require('./assets/onbor.gif')}
+      source={require('./assets/Background-01.jpg')}
       resizeMode={FastImage.resizeMode.cover}>
       <Image style={styles.img} source={require('./assets/Png-02.png')} />
       <LinearGradient colors={['#d3e4f6', '#a1d1ff']} style={styles.container}>
@@ -1006,7 +1006,7 @@ const SignupScreen = () => {
         <TouchableOpacity onPress={() => navigation.navigate('LoginScreen')}>
           <Text style={styles.logAccount}>
             Already Have An Account?{' '}
-            <Text style={{color: 'blue'}}>Login..</Text>
+            <Text style={{color: 'blue'}}>Login</Text>
           </Text>
         </TouchableOpacity>
       </LinearGradient>

@@ -46,7 +46,7 @@ const LoginScreen = () => {
     setLoading(true);
     try {
       const response = await axios.post(
-        'http://192.168.1.5:8080/api/login',
+        'http://192.168.1.9:8080/api/login',
         { email, password },
         {
           headers: {
@@ -114,7 +114,7 @@ const handleWebViewNavigationStateChange = async (navState) => {
       setShowLinkedInModal(false); // Close the LinkedIn modal
       setLoading(true);
       try {
-        const response = await axios.post('http://192.168.1.5:8080/auth/linkedin', { code });
+        const response = await axios.post('http://192.168.1.9:8080/auth/linkedin', { code });
         const { given_name, email } = response.data;
         console.log('====================================');
         console.log(response.data);
@@ -145,7 +145,7 @@ const handleWebViewNavigationStateChange = async (navState) => {
   return (
     <FastImage
         style={styles.backgroundImage}
-        source={require('./assets/onbor.gif')}
+        source={require('./assets/Background-01.jpg')}
         resizeMode={FastImage.resizeMode.cover}
       >
     <Image style={styles.img} source={require('./assets/Png-01.png')} />

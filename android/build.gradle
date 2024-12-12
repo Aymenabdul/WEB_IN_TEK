@@ -11,6 +11,10 @@ buildscript {
     repositories {
         google()
         mavenCentral()
+        mavenLocal()
+        maven {
+            url("$rootDir/../node_modules/@notifee/react-native/android")
+        }
     }
     dependencies {
         classpath("com.android.tools.build:gradle")
@@ -18,5 +22,4 @@ buildscript {
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin")
     }
 }
-
 apply plugin: "com.facebook.react.rootproject"

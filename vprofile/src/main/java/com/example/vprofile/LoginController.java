@@ -19,8 +19,9 @@ public class LoginController {
     @PostMapping("/login")
 public ResponseEntity<Map<String, Object>> login(@RequestBody Map<String, String> payload) {
     String email = payload.get("email");
+    System.out.println(email);
     String password = payload.get("password");
-
+System.out.println(password);
     // Fetch user from the database
     Optional<User> userOptional = userRepository.findByEmail(email);
 

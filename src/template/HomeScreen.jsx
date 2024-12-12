@@ -28,6 +28,8 @@ import {
 } from 'react-native-gesture-handler';
 import Share from 'react-native-share'; // Import the share module
 import { PermissionsAndroid, Platform } from 'react-native';
+import notifee from '@notifee/react-native';
+
 
 const HomeScreen = () => {
   const [loading, setLoading] = useState(true);
@@ -77,7 +79,7 @@ const HomeScreen = () => {
   const fetchPhoneNumber = () => {
     console.log("Fetching phone number for videoId:", videoId); // Log videoId to ensure it's correct
     axios
-      .get(`http://192.168.1.5:8080/api/videos/getOwnerByVideoId/${videoId}`)
+      .get(`http://192.168.1.9:8080/api/videos/getOwnerByVideoId/${videoId}`)
       .then(response => {
         console.log('API Response:', response); // Log the entire response
         if (response.data && response.data.phoneNumber) {
@@ -194,7 +196,7 @@ const sendWhatsappMessage = () => {
   const fetchLikeStatus = async () => {
     try {
       const response = await axios.get(
-        `http://192.168.1.5:8080/api/videos/likes/status`,
+        `http://192.168.1.9:8080/api/videos/likes/status`,
         {
           params: {userId},
         },
@@ -217,7 +219,7 @@ const sendWhatsappMessage = () => {
   const fetchLikeCount = videoId => {
     console.log('Fetching like count for videoId:', videoId); // Check if the videoId is correct
     axios
-      .get(`http://192.168.1.5:8080/api/videos/${videoId}/like-count`)
+      .get(`http://192.168.1.9:8080/api/videos/${videoId}/like-count`)
       .then(response => {
         console.log('API response:', response.data);
         setLikeCount(response.data); // Update state with the correct count
@@ -233,21 +235,46 @@ const sendWhatsappMessage = () => {
       ...prevState,
       [videoId]: newLikedState,
     }));
-
+  
     try {
       if (newLikedState) {
         // If liked, send like request
         await axios.post(
-          `http://192.168.1.5:8080/api/videos/${videoId}/like`,
+          `http://192.168.1.9:8080/api/videos/${videoId}/like`,
           null,
           {params: {userId}},
         );
         setLikeCount(prevCount => prevCount + 1); // Increment like count
+  
+        // Trigger notification for video owner (after the like request is successful)
+        await triggerOwnerNotification();
       }
     } catch (error) {
       console.error('Error toggling like:', error);
     }
   };
+
+  // Function to trigger notification for the video owner
+const triggerOwnerNotification = async () => {
+  try {
+    console.log('Triggering notification for the video owner...');
+
+    await notifee.displayNotification({
+      title: 'wezume',
+      body: `Your video has been liked by ${firstName}.`,
+      android: {
+        channelId: 'owner-channel',  // Assuming 'owner-channel' was created previously
+        smallIcon: 'ic_launcher',
+        importance: 4,  // HIGH importance for visibility
+        vibrate: true,
+      },
+    });
+
+    console.log('Owner notification triggered.');
+  } catch (error) {
+    console.log('Error triggering notification for owner:', error);
+  }
+};
 
   // Handle dislike action
   const handleDislike = async () => {
@@ -261,7 +288,7 @@ const sendWhatsappMessage = () => {
       if (!newLikedState) {
         // If disliked, send dislike request
         await axios.post(
-          `http://192.168.1.5:8080/api/videos/${videoId}/dislike`,
+          `http://192.168.1.9:8080/api/videos/${videoId}/dislike`,
           null,
           {params: {userId}},
         );
@@ -279,7 +306,7 @@ const sendWhatsappMessage = () => {
     try {
       // Fetch user details by videoId
       const response = await axios.get(
-        `http://192.168.1.5:8080/api/videos/user/${videoId}/details`,
+        `http://192.168.1.9:8080/api/videos/user/${videoId}/details`,
       );
 
       // Log response data for debugging
@@ -313,7 +340,7 @@ const sendWhatsappMessage = () => {
   const fetchProfilePic = async userId => {
     try {
       const response = await axios.get(
-        `http://192.168.1.5:8080/users/user/${userId}/profilepic`,
+        `http://192.168.1.9:8080/users/user/${userId}/profilepic`,
         {
           responseType: 'arraybuffer',
         },
@@ -337,7 +364,7 @@ const sendWhatsappMessage = () => {
 
   const fetchVideos = async () => {
     try {
-      const response = await fetch('http://192.168.1.5:8080/api/videos/videos');
+      const response = await fetch('http://192.168.1.9:8080/api/videos/videos');
       if (!response.ok)
         throw new Error(`Failed to fetch videos: ${response.statusText}`);
 
@@ -348,7 +375,7 @@ const sendWhatsappMessage = () => {
         const videoURIs = videoData.map(video => ({
           id: video.id,
           title: video.title || 'Untitled Video',
-          uri: `http://192.168.1.5:8080/api/videos/user/${video.userId}`,
+          uri: `http://192.168.1.9:8080/api/videos/user/${video.userId}`,
         }));
         console.log('Generated URIs:', videoURIs); // Log generated URLs
         setVideoUrl(videoURIs);
@@ -388,7 +415,7 @@ const sendWhatsappMessage = () => {
   const videosToDisplay = filteredVideos
     ? filteredVideos.map(video => ({
         ...video,
-        uri: `http://192.168.1.5:8080/api/videos/user/${video.id}`, // Ensure each filtered video has its URI
+        uri: `http://192.168.1.9:8080/api/videos/user/${video.id}`, // Ensure each filtered video has its URI
       }))
     : videourl;
 
